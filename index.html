@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -11,7 +10,7 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     
     <style>
-        :root { --primary: #1e293b; --entry: #10b981; --exit: #ef4444; --accent: #3b82f6; --warning: #f59e0b; --bg: #f1f5f9; }
+        :root { --primary: #1e293b; --entry: #10b981; --exit: #ef4444; --accent: #3b82f6; --warning: #f59e0b; --bg: #f1f5f9; --dry: #94a3b8; --frigo: #0ea5e9; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding-top: 75px; }
         
         .header-tabs { position: fixed; top: 0; width: 100%; background: var(--primary); display: flex; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 1000; overflow-x: auto; }
@@ -30,19 +29,14 @@
         .btn { width: 100%; padding: 18px; border: none; border-radius: 10px; color: white; font-weight: 700; font-size: 16px; cursor: pointer; margin-bottom: 10px; }
         .btn-entry { background: var(--entry); }
         .btn-exit { background: var(--exit); }
-        .btn-add { background: var(--accent); }
 
-        .card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #64748b; }
-        .alert-card { border-left-color: var(--warning); background: #fffbeb; }
-        
+        .search-container { margin-bottom: 15px; background: white; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .total-badge { background: var(--primary); color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; display: inline-block; margin-top: 10px; }
+
         .table-container { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; }
         th { background: #f8fafc; padding: 12px; text-align: left; font-size: 10px; color: #64748b; border-bottom: 2px solid #f1f5f9; }
         td { padding: 15px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
-        
-        .badge { font-size: 10px; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
-        .badge-red { background: #fee2e2; color: #ef4444; }
-        .badge-orange { background: #ffedd5; color: #f59e0b; }
         
         #reader-entry, #reader-exit { width: 100%; border-radius: 12px; overflow: hidden; background: #000; margin-bottom: 20px; border: 2px solid #cbd5e1; }
     </style>
@@ -53,8 +47,7 @@
     <div id="tab-ent" class="tab-item active" onclick="switchTab('entrada')">Entrada</div>
     <div id="tab-sai" class="tab-item" onclick="switchTab('saida')">Saída</div>
     <div id="tab-est" class="tab-item" onclick="switchTab('estoque')">Depósito</div>
-    <div id="tab-rel" class="tab-item" onclick="switchTab('relatorio')">Relatório</div>
-    <div id="tab-his" class="tab-item" onclick="switchTab('historico')">Histórico</div>
+    <div id="tab-fech" class="tab-item" onclick="switchTab('fechamento')">Relatórios</div>
 </nav>
 
 <div class="container">
@@ -65,16 +58,12 @@
         <div class="form-group">
             <label>Código de Barras</label>
             <input type="text" id="ent-code" placeholder="Escanear...">
-            <label>Nome do Material</label>
-            <input type="text" id="ent-nome" placeholder="Nome">
+            <label>Nome do Material (e Marca)</label>
+            <input type="text" id="ent-nome" placeholder="Ex: Arroz Tio João">
+            <label>Setor / Tipo</label>
+            <select id="ent-setor"><option value="SECO">Seco</option><option value="FRIGORIFICO">Frigorífico</option></select>
             <label>Validade</label>
             <input type="date" id="ent-validade">
-            <label>Unidade</label>
-            <select id="ent-unidade">
-                <option value="kg">kg</option><option value="g">g</option>
-                <option value="un">un</option><option value="lata">lata</option>
-                <option value="litro">litro</option><option value="pacote">pacote</option>
-            </select>
             <label>Qtd</label>
             <input type="number" id="ent-qtd" value="1">
             <button class="btn btn-entry" onclick="processar('ENTRADA')">REGISTRAR ENTRADA</button>
@@ -87,57 +76,55 @@
         <div class="form-group">
             <label>Código de Barras</label>
             <input type="text" id="sai-code" placeholder="Escanear...">
-            <label>Quantidade</label>
+            <label>Qtd</label>
             <input type="number" id="sai-qtd" value="1">
             <button class="btn btn-exit" onclick="processar('SAIDA')">REGISTRAR SAÍDA</button>
         </div>
     </div>
 
-    <!-- DEPÓSITO -->
+    <!-- DEPÓSITO COM FILTROS E SOMA -->
     <div id="page-estoque" class="page">
-        <button class="btn btn-add" onclick="switchTab('entrada')">+ ADICIONAR NOVO ITEM</button>
+        <div class="search-container">
+            <label>Filtrar Material (ex: Arroz)</label>
+            <input type="text" id="filtro-estoque" onkeyup="renderizarEstoque()" placeholder="Digite para filtrar e somar...">
+            <div id="badge-soma-total" class="total-badge" style="display:none;"></div>
+        </div>
+
+        <label>🥩 FRIGORÍFICO</label>
         <div class="table-container">
             <table>
-                <thead>
-                    <tr><th>Material</th><th style="text-align:center">Saldo</th><th>Ações</th></tr>
-                </thead>
-                <tbody id="tabela-estoque"></tbody>
+                <thead><tr><th>Material</th><th>Saldo</th><th>Ações</th></tr></thead>
+                <tbody id="tabela-frigorifico"></tbody>
+            </table>
+        </div>
+
+        <label>📦 SECOS</label>
+        <div class="table-container">
+            <table>
+                <thead><tr><th>Material</th><th>Saldo</th><th>Ações</th></tr></thead>
+                <tbody id="tabela-secos"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- RELATÓRIO -->
-    <div id="page-relatorio" class="page">
-        <label>⚠️ ALERTAS DE VENCIMENTO (Próximos 15 dias)</label>
-        <div id="alertas-vencimento"></div>
-        
-        <label style="margin-top:20px">📊 RESUMO DE CONSUMO GERAL</label>
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr><th>Item</th><th>Total Saído</th><th>Validade</th></tr>
-                </thead>
-                <tbody id="tabela-relatorio"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- HISTÓRICO -->
-    <div id="page-historico" class="page">
+    <!-- RELATÓRIOS / FECHAMENTO -->
+    <div id="page-fechamento" class="page">
         <div id="logs-geral"></div>
     </div>
 </div>
 
 <script>
+    // CONFIGURAÇÃO FIREBASE
+    // IMPORTANTE: Insira aqui as suas chaves do Firebase
     const firebaseConfig = {
-        apiKey: "AIzaSyA-2SH_h57k24EKQXLjOkWsrs70tbSbFGE",
-    authDomain: "depositorancho-43b21.firebaseapp.com",
-    databaseURL: "https://depositorancho-43b21-default-rtdb.firebaseio.com",
-    projectId: "depositorancho-43b21",
-    storageBucket: "depositorancho-43b21.firebasestorage.app",
-    messagingSenderId: "883363350930",
-    appId: "1:883363350930:web:3da976d452d26837ef994b"
-    };
+  apiKey: "AIzaSyA-2SH_h57k24EKQXLjOkWsrs70tbSbFGE",
+  authDomain: "depositorancho-43b21.firebaseapp.com",
+  databaseURL: "https://depositorancho-43b21-default-rtdb.firebaseio.com",
+  projectId: "depositorancho-43b21",
+  storageBucket: "depositorancho-43b21.firebasestorage.app",
+  messagingSenderId: "883363350930",
+  appId: "1:883363350930:web:3da976d452d26837ef994b"
+};
 
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
@@ -147,7 +134,7 @@
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
         document.getElementById('page-' + tab).classList.add('active');
-        document.getElementById('tab-' + tab.substring(0,3)).classList.add('active');
+        document.getElementById('tab-' + tab.substring(0,4)).classList.add('active');
 
         if (html5QrCode) { try { await html5QrCode.stop(); } catch(e) {} }
         const divId = tab === 'entrada' ? 'reader-entry' : (tab === 'saida' ? 'reader-exit' : null);
@@ -156,12 +143,6 @@
             html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: { width: 250, height: 150 } }, (text) => {
                 const prefix = tab === 'entrada' ? 'ent' : 'sai';
                 document.getElementById(prefix + '-code').value = text;
-                database.ref('estoque/' + text).once('value', snap => {
-                    if(snap.exists() && tab === 'entrada') {
-                        document.getElementById('ent-nome').value = snap.val().nome;
-                        document.getElementById('ent-unidade').value = snap.val().unidade || 'un';
-                    }
-                });
             });
         }
     }
@@ -170,81 +151,63 @@
         const prefix = tipo === 'ENTRADA' ? 'ent' : 'sai';
         const code = document.getElementById(prefix + '-code').value;
         const qtd = parseInt(document.getElementById(prefix + '-qtd').value);
-        if (!code || isNaN(qtd)) return alert("Preencha os dados!");
+        if (!code || isNaN(qtd)) return;
 
         const itemRef = database.ref('estoque/' + code);
         itemRef.once('value', snap => {
-            let dados = snap.val() || { nome: code, saldo: 0, totalSaida: 0 };
-            
-            if (tipo === 'ENTRADA') {
-                const nome = document.getElementById('ent-nome').value || dados.nome;
-                const unidade = document.getElementById('ent-unidade').value;
-                const validade = document.getElementById('ent-validade').value || dados.validade || "";
-                itemRef.update({ 
-                    nome, unidade, validade, 
-                    saldo: dados.saldo + qtd 
-                });
-            } else {
-                if (dados.saldo < qtd) return alert("Saldo insuficiente!");
-                itemRef.update({ 
-                    saldo: dados.saldo - qtd, 
-                    totalSaida: (dados.totalSaida || 0) + qtd 
-                });
-            }
+            let d = snap.val() || { nome: code, saldo: 0, setor: 'SECO' };
+            let novoSaldo = tipo === 'ENTRADA' ? d.saldo + qtd : d.saldo - qtd;
+            if (novoSaldo < 0) return alert("Saldo insuficiente!");
 
-            database.ref('logs').push({
-                tipo, code, nome: dados.nome, qtd, data: new Date().toLocaleString()
-            });
+            const updateData = { 
+                saldo: novoSaldo,
+                nome: tipo === 'ENTRADA' ? document.getElementById('ent-nome').value : d.nome,
+                setor: tipo === 'ENTRADA' ? document.getElementById('ent-setor').value : (d.setor || 'SECO'),
+                validade: tipo === 'ENTRADA' ? document.getElementById('ent-validade').value : (d.validade || '')
+            };
+
+            itemRef.update(updateData);
+            database.ref('logs').push({ tipo, code, nome: updateData.nome, qtd, data: new Date().toLocaleString() });
             document.getElementById(prefix + '-code').value = '';
         });
     }
 
-    database.ref('estoque').on('value', snap => {
-        const tbEstoque = document.getElementById('tabela-estoque');
-        const tbRelatorio = document.getElementById('tabela-relatorio');
-        const alertaDiv = document.getElementById('alertas-vencimento');
-        
-        tbEstoque.innerHTML = ''; tbRelatorio.innerHTML = ''; alertaDiv.innerHTML = '';
-        
-        let itens = [];
-        snap.forEach(c => { let i = c.val(); i.id = c.key; itens.push(i); });
-        itens.sort((a, b) => a.nome.localeCompare(b.nome));
+    function renderizarEstoque() {
+        const filtro = document.getElementById('filtro-estoque').value.toLowerCase();
+        database.ref('estoque').once('value', snap => {
+            const tbSecos = document.getElementById('tabela-secos');
+            const tbFrigo = document.getElementById('tabela-frigorifico');
+            const badgeSoma = document.getElementById('badge-soma-total');
+            
+            tbSecos.innerHTML = ''; tbFrigo.innerHTML = '';
+            let somaFiltrada = 0;
+            let temFiltro = filtro.length > 0;
 
-        const hoje = new Date();
-        const limiteAviso = new Date();
-        limiteAviso.setDate(hoje.getDate() + 15);
-
-        itens.forEach(item => {
-            // Depósito
-            tbEstoque.innerHTML += `<tr><td><b>${item.nome}</b></td><td align="center">${item.saldo} ${item.unidade}</td>
-            <td><button onclick="if(confirm('Remover?')) database.ref('estoque/${item.id}').remove()" style="border:none;background:none">🗑️</button></td></tr>`;
-
-            // Relatório e Vencimento
-            let statusVencimento = "";
-            if (item.validade) {
-                const dataVal = new Date(item.validade);
-                if (dataVal <= hoje) {
-                    statusVencimento = '<span class="badge badge-red">VENCIDO</span>';
-                    alertaDiv.innerHTML += `<div class="card alert-card"><b>${item.nome}</b> <span class="badge badge-red">VENCIDO EM ${item.validade}</span></div>`;
-                } else if (dataVal <= limiteAviso) {
-                    statusVencimento = '<span class="badge badge-orange">VENCE EM BREVE</span>';
-                    alertaDiv.innerHTML += `<div class="card alert-card"><b>${item.nome}</b> <span class="badge badge-orange">VENCE EM ${item.validade}</span></div>`;
+            snap.forEach(c => {
+                const i = c.val();
+                const nomeLower = i.nome.toLowerCase();
+                
+                if (nomeLower.includes(filtro)) {
+                    if (temFiltro) somaFiltrada += i.saldo;
+                    
+                    const row = `<tr><td><b>${i.nome}</b></td><td align="center">${i.saldo}</td><td><button onclick="database.ref('estoque/${c.key}').remove()">🗑️</button></td></tr>`;
+                    
+                    if (i.setor === 'FRIGORIFICO') tbFrigo.innerHTML += row;
+                    else tbSecos.innerHTML += row;
                 }
+            });
+
+            if (temFiltro) {
+                badgeSoma.style.display = 'inline-block';
+                badgeSoma.innerHTML = `SOMA TOTAL (${filtro.toUpperCase()}): ${somaFiltrada}`;
+            } else {
+                badgeSoma.style.display = 'none';
             }
-
-            tbRelatorio.innerHTML += `<tr><td>${item.nome}<br>${statusVencimento}</td><td>${item.totalSaida || 0} ${item.unidade}</td><td>${item.validade || '-'}</td></tr>`;
         });
-        if(alertaDiv.innerHTML === "") alertaDiv.innerHTML = "<small>Nenhum item vencendo nos próximos 15 dias.</small>";
-    });
+    }
 
-    database.ref('logs').limitToLast(15).on('value', snap => {
-        const div = document.getElementById('logs-geral');
-        div.innerHTML = '';
-        snap.forEach(c => {
-            const l = c.val();
-            div.innerHTML = `<div class="card" style="border-left-color:${l.tipo === 'ENTRADA' ? '#10b981' : '#ef4444'}"><div><b>${l.tipo}: ${l.qtd} de ${l.nome}</b><br><small>${l.data}</small></div></div>` + div.innerHTML;
-        });
-    });
+    database.ref('estoque').on('value', renderizarEstoque);
+    window.onload = () => switchTab('entrada');
 </script>
 </body>
 </html>
