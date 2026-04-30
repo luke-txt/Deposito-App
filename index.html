@@ -3,116 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor de Depósito Pro</title>
+    <title>Depósito Lucas - Scan Express</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        :root { --primary: #2c3e50; --success: #27ae60; --danger: #e74c3c; --light: #ecf0f1; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 10px; }
-        .container { max-width: 600px; margin: auto; background: white; border-radius: 15px; shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; }
+        :root { --primary: #1a237e; --entry: #2e7d32; --exit: #c62828; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; color: #333; }
+        .container { max-width: 800px; margin: auto; }
         
-        /* Abas */
-        .tabs { display: flex; background: var(--primary); }
-        .tab-btn { flex: 1; padding: 15px; color: white; border: none; background: none; cursor: pointer; font-weight: bold; opacity: 0.6; }
-        .tab-btn.active { opacity: 1; border-bottom: 4px solid white; }
+        /* Scanner Section */
+        .scanner-section { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        #reader { width: 100%; border-radius: 8px; overflow: hidden; }
         
-        .content { padding: 20px; display: none; }
-        .content.active { display: block; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        
+        .action-btns { display: flex; gap: 10px; margin-top: 10px; }
+        .btn { flex: 1; padding: 15px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.2s; }
+        .btn-entry { background: var(--entry); }
+        .btn-exit { background: var(--exit); }
+        .btn:active { transform: scale(0.98); }
 
-        /* Formulário */
-        #reader { width: 100%; border-radius: 10px; margin-bottom: 15px; }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        .btn-group { display: flex; gap: 10px; }
-        button { flex: 1; padding: 15px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; }
-        .btn-entry { background: var(--success); }
-        .btn-exit { background: var(--danger); }
+        /* Dashboard de Movimentação */
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .mov-list { background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); height: 300px; overflow-y: auto; }
+        .mov-list h3 { font-size: 14px; margin-top: 0; padding-bottom: 5px; border-bottom: 2px solid #eee; position: sticky; top: 0; background: white; }
+        
+        .entry-title { color: var(--entry); }
+        .exit-title { color: var(--exit); }
 
-        /* Tabela de Inventário */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
-        th { background: var(--light); }
-        .low-stock { color: var(--danger); font-weight: bold; }
+        .item-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f1f1; font-size: 12px; }
+
+        /* Aba de Inventário (Oculta por padrão) */
+        #aba-inventario { display: none; background: white; padding: 20px; border-radius: 12px; margin-top: 20px; }
+        .nav-tabs { display: flex; gap: 10px; margin-bottom: 10px; }
+        .nav-link { padding: 10px 20px; background: #ddd; border-radius: 20px; text-decoration: none; color: #666; font-size: 13px; cursor: pointer; }
+        .nav-link.active { background: var(--primary); color: white; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="tabs">
-        <button class="tab-btn active" onclick="openTab('operacao')">OPERAR</button>
-        <button class="tab-btn" onclick="openTab('inventario')">INVENTÁRIO</button>
+    <div class="nav-tabs">
+        <div id="tab1" class="nav-link active" onclick="showPage('operacao')">Operação</div>
+        <div id="tab2" class="nav-link" onclick="showPage('inventario')">Inventário Total</div>
     </div>
 
-    <div id="operacao" class="content active">
-        <div id="reader"></div>
-        <input type="text" id="sku" placeholder="Código do Material (Barcode)">
-        <input type="text" id="nome" placeholder="Nome do Material (Opcional na saída)">
-        <input type="number" id="qtd" placeholder="Quantidade" value="1">
-        
-        <div class="btn-group">
-            <button class="btn-entry" onclick="processar('ENTRADA')">📥 ENTRADA</button>
-            <button class="btn-exit" onclick="processar('SAIDA')">📤 SAÍDA</button>
+    <div id="page-operacao">
+        <div class="scanner-section">
+            <div id="reader"></div>
+            <input type="text" id="barcode" placeholder="Escaneie ou digite o código">
+            <input type="text" id="nome" placeholder="Nome do Material (Apenas na 1ª entrada)">
+            <input type="number" id="qtd" value="1">
+            
+            <div class="action-btns">
+                <button class="btn btn-entry" onclick="registrar('ENTRADA')">📥 INCLUIR (Entrada)</button>
+                <button class="btn btn-exit" onclick="registrar('SAIDA')">📤 BAIXA (Saída)</button>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="mov-list">
+                <h3 class="entry-title">Inclusos Hoje</h3>
+                <div id="lista-entradas"></div>
+            </div>
+            <div class="mov-list">
+                <h3 class="exit-title">Saídas Hoje</h3>
+                <div id="lista-saidas"></div>
+            </div>
         </div>
     </div>
 
-    <div id="inventario" class="content">
-        <h3>Materiais em Estoque</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Material</th>
-                    <th>Qtd</th>
-                    <th>Ação</th>
-                </tr>
-            </thead>
-            <tbody id="corpo-tabela"></tbody>
-        </table>
-        <button onclick="exportarDados()" style="background: #34495e; margin-top: 20px;">Baixar Relatório (CSV)</button>
+    <div id="aba-inventario">
+        <h2>Estoque Consolidado</h2>
+        <div id="tabela-total"></div>
+        <button onclick="limparTudo()" style="margin-top:30px; color: red; background: none; border: none; cursor: pointer;">⚠️ Resetar Sistema</button>
     </div>
 </div>
 
 <script>
-    let estoque = JSON.parse(localStorage.getItem('deposito_db')) || {};
+    let db = JSON.parse(localStorage.getItem('deposito_lucas')) || { estoque: {}, logs: [] };
 
-    // Scanner
-    const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-    scanner.render((text) => { document.getElementById('sku').value = text; });
+    // Iniciar Scanner
+    const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 200 });
+    scanner.render((text) => {
+        document.getElementById('barcode').value = text;
+        // Se o produto já existe, preenche o nome automaticamente
+        if(db.estoque[text]) document.getElementById('nome').value = db.estoque[text].nome;
+    });
 
-    function openTab(tabName) {
-        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(tabName).classList.add('active');
-        event.currentTarget.classList.add('active');
-        if(tabName === 'inventario') atualizarTabela();
+    function showPage(p) {
+        if(p === 'operacao') {
+            document.getElementById('page-operacao').style.display = 'block';
+            document.getElementById('aba-inventario').style.display = 'none';
+            document.getElementById('tab1').classList.add('active');
+            document.getElementById('tab2').classList.remove('active');
+        } else {
+            document.getElementById('page-operacao').style.display = 'none';
+            document.getElementById('aba-inventario').style.display = 'block';
+            document.getElementById('tab1').classList.remove('active');
+            document.getElementById('tab2').classList.add('active');
+            renderInventario();
+        }
     }
 
-    function processar(tipo) {
-        const sku = document.getElementById('sku').value;
-        const nome = document.getElementById('nome').value || sku;
+    function registrar(tipo) {
+        const code = document.getElementById('barcode').value;
+        const nome = document.getElementById('nome').value || code;
         const qtd = parseInt(document.getElementById('qtd').value);
 
-        if (!sku || isNaN(qtd)) return alert("Dados insuficientes!");
+        if(!code || isNaN(qtd)) return alert("Escaneie o código!");
 
-        if (!estoque[sku]) {
-            if (tipo === 'SAIDA') return alert("Material nunca cadastrado!");
-            estoque[sku] = { nome: nome, saldo: 0 };
+        // Lógica de Estoque
+        if(!db.estoque[code]) {
+            if(tipo === 'SAIDA') return alert("Erro: Material não existe no estoque!");
+            db.estoque[code] = { nome: nome, saldo: 0 };
         }
 
-        if (tipo === 'ENTRADA') {
-            estoque[sku].saldo += qtd;
+        if(tipo === 'ENTRADA') {
+            db.estoque[code].saldo += qtd;
         } else {
-            if (estoque[sku].saldo < qtd) return alert("Saldo insuficiente!");
-            estoque[sku].saldo -= qtd;
+            if(db.estoque[code].saldo < qtd) return alert("Saldo insuficiente!");
+            db.estoque[code].saldo -= qtd;
         }
 
-        localStorage.setItem('deposito_db', JSON.stringify(estoque));
-        alert(`${tipo} realizada com sucesso!`);
-        limparCampos();
+        // Registrar Log (para as listas debaixo)
+        db.logs.push({ tipo, code, nome: db.estoque[code].nome, qtd, hora: new Date().toLocaleTimeString() });
+        
+        localStorage.setItem('deposito_lucas', JSON.stringify(db));
+        renderListas();
+        
+        // Limpar apenas campos necessários
+        document.getElementById('barcode').value = '';
+        document.getElementById('nome').value = '';
     }
 
-    function atualizarTabela() {
-        const corpo = document.getElementById('corpo-tabela');
-        corpo.innerHTML = "";
-        for (let sku in estoque) {
-            const item = estoque[sku];
-            cor
+    function renderListas() {
+        const entDiv = document.getElementById('lista-entradas');
+        const saiDiv = document.getElementById('lista-saidas');
+        
+        entDiv.innerHTML = '';
+        saiDiv.innerHTML = '';
 
+        // Filtra os logs de hoje e inverte para o mais novo aparecer em cima
+        [...db.logs].reverse().forEach(log => {
+            const html = `<div class="item-row"><span>${log.nome} (x${log.qtd})</span><span>${log.hora}</span></div>`;
+            if(log.tipo === 'ENTRADA') entDiv.innerHTML += html;
+            else saiDiv.innerHTML += html;
+        });
+    }
 
+    function renderInventario() {
+        const div = document.getElementById('tabela-total');
+        let html = '<table style="width:100%; border-collapse:collapse;"><tr><th style="text-align:left">Item</th><th>Saldo</th></tr>';
+        
+        for(let code in db.estoque) {
+            const item = db.estoque[code];
+            html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px">${item.nome}<br><small>${code}</small></td><td style="text-align:center">${item.saldo}</td></tr>`;
+        }
+        div.innerHTML = html + '</table>';
+    }
+
+    function limparTudo() {
+        if(confirm("Isso apagará TODOS os dados do depósito. Confirma?")) {
+            localStorage.removeItem('deposito_lucas');
+            location.reload();
+        }
+    }
+
+    // Inicializar listas
+    renderListas();
+</script>
+
+</body>
+</html>
