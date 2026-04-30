@@ -3,90 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Depósito Inteligente</title>
+    <title>Gestor de Depósito Pro</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #f4f4f9; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-bottom: 15px; }
-        input { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px; }
-        button.delete { background: #dc3545; margin-top: 20px; font-size: 12px; }
-        .item { background: #eee; padding: 10px; margin-top: 5px; border-radius: 4px; display: flex; justify-content: space-between; font-size: 14px; }
+        :root { --primary: #2c3e50; --success: #27ae60; --danger: #e74c3c; --light: #ecf0f1; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 10px; }
+        .container { max-width: 600px; margin: auto; background: white; border-radius: 15px; shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; }
+        
+        /* Abas */
+        .tabs { display: flex; background: var(--primary); }
+        .tab-btn { flex: 1; padding: 15px; color: white; border: none; background: none; cursor: pointer; font-weight: bold; opacity: 0.6; }
+        .tab-btn.active { opacity: 1; border-bottom: 4px solid white; }
+        
+        .content { padding: 20px; display: none; }
+        .content.active { display: block; }
+
+        /* Formulário */
+        #reader { width: 100%; border-radius: 10px; margin-bottom: 15px; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .btn-group { display: flex; gap: 10px; }
+        button { flex: 1; padding: 15px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; }
+        .btn-entry { background: var(--success); }
+        .btn-exit { background: var(--danger); }
+
+        /* Tabela de Inventário */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        th { background: var(--light); }
+        .low-stock { color: var(--danger); font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📦 Saída de Materiais</h2>
-    
-    <div id="reader"></div>
-    
-    <input type="text" id="barcode-input" placeholder="Código de Barras escaneado">
-    <input type="number" id="qty-input" placeholder="Quantidade" value="1">
-    <button onclick="registrarSaida()">Confirmar Saída</button>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab('operacao')">OPERAR</button>
+        <button class="tab-btn" onclick="openTab('inventario')">INVENTÁRIO</button>
+    </div>
 
-    <h3>Histórico do Dia</h3>
-    <div id="lista-estoque"></div>
+    <div id="operacao" class="content active">
+        <div id="reader"></div>
+        <input type="text" id="sku" placeholder="Código do Material (Barcode)">
+        <input type="text" id="nome" placeholder="Nome do Material (Opcional na saída)">
+        <input type="number" id="qtd" placeholder="Quantidade" value="1">
+        
+        <div class="btn-group">
+            <button class="btn-entry" onclick="processar('ENTRADA')">📥 ENTRADA</button>
+            <button class="btn-exit" onclick="processar('SAIDA')">📤 SAÍDA</button>
+        </div>
+    </div>
 
-    <button class="delete" onclick="limparHistorico()">Limpar Tudo</button>
+    <div id="inventario" class="content">
+        <h3>Materiais em Estoque</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Material</th>
+                    <th>Qtd</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody id="corpo-tabela"></tbody>
+        </table>
+        <button onclick="exportarDados()" style="background: #34495e; margin-top: 20px;">Baixar Relatório (CSV)</button>
+    </div>
 </div>
 
 <script>
-    // 1. Inicializa o Scanner
+    let estoque = JSON.parse(localStorage.getItem('deposito_db')) || {};
+
+    // Scanner
     const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-    scanner.render((text) => {
-        document.getElementById('barcode-input').value = text;
-        // Opcional: emitir um sinal sonoro aqui
-    });
+    scanner.render((text) => { document.getElementById('sku').value = text; });
 
-    // 2. Carregar dados ao abrir a página
-    document.addEventListener('DOMContentLoaded', carregarDados);
-
-    function registrarSaida() {
-        const code = document.getElementById('barcode-input').value;
-        const qty = document.getElementById('qty-input').value;
-        
-        if(!code || qty <= 0) return alert("Preencha o código e a quantidade!");
-
-        const novaSaida = {
-            codigo: code,
-            quantidade: qty,
-            hora: new Date().toLocaleTimeString()
-        };
-
-        // Salvar no LocalStorage
-        const historico = JSON.parse(localStorage.getItem('deposito_dados') || '[]');
-        historico.push(novaSaida);
-        localStorage.setItem('deposito_dados', JSON.stringify(historico));
-
-        renderizarLista();
-        document.getElementById('barcode-input').value = '';
+    function openTab(tabName) {
+        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabName).classList.add('active');
+        event.currentTarget.classList.add('active');
+        if(tabName === 'inventario') atualizarTabela();
     }
 
-    function carregarDados() {
-        renderizarLista();
-    }
+    function processar(tipo) {
+        const sku = document.getElementById('sku').value;
+        const nome = document.getElementById('nome').value || sku;
+        const qtd = parseInt(document.getElementById('qtd').value);
 
-    function renderizarLista() {
-        const listaDiv = document.getElementById('lista-estoque');
-        const historico = JSON.parse(localStorage.getItem('deposito_dados') || '[]');
-        
-        listaDiv.innerHTML = historico.map(item => `
-            <div class="item">
-                <span><strong>${item.codigo}</strong> (x${item.quantidade})</span>
-                <span style="color: #666">${item.hora}</span>
-            </div>
-        `).reverse().join(''); // Mostra o mais recente primeiro
-    }
+        if (!sku || isNaN(qtd)) return alert("Dados insuficientes!");
 
-    function limparHistorico() {
-        if(confirm("Deseja apagar todo o histórico de hoje?")) {
-            localStorage.removeItem('deposito_dados');
-            renderizarLista();
+        if (!estoque[sku]) {
+            if (tipo === 'SAIDA') return alert("Material nunca cadastrado!");
+            estoque[sku] = { nome: nome, saldo: 0 };
         }
-    }
-</script>
 
-</body>
-</html>
+        if (tipo === 'ENTRADA') {
+            estoque[sku].saldo += qtd;
+        } else {
+            if (estoque[sku].saldo < qtd) return alert("Saldo insuficiente!");
+            estoque[sku].saldo -= qtd;
+        }
+
+        localStorage.setItem('deposito_db', JSON.stringify(estoque));
+        alert(`${tipo} realizada com sucesso!`);
+        limparCampos();
+    }
+
+    function atualizarTabela() {
+        const corpo = document.getElementById('corpo-tabela');
+        corpo.innerHTML = "";
+        for (let sku in estoque) {
+            const item = estoque[sku];
+            cor
+
+
