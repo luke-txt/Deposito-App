@@ -3,119 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Depósito Pro - Lucas</title>
-    
+    <title>DEPÓSITO INTELLIGENCE V8</title>
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2897/2897785.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    
+
     <style>
-        :root { --primary: #1e293b; --entry: #10b981; --exit: #ef4444; --accent: #3b82f6; --warning: #f59e0b; --bg: #f1f5f9; --dry: #94a3b8; --frigo: #0ea5e9; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding-top: 75px; }
+        :root { --primary: #0f172a; --accent: #3b82f6; --entry: #10b981; --exit: #ef4444; --bg: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; color: #1e293b; }
         
-        .header-tabs { position: fixed; top: 0; width: 100%; background: var(--primary); display: flex; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 1000; overflow-x: auto; }
-        .tab-item { flex: 1; text-align: center; padding: 20px 10px; font-size: 10px; font-weight: 700; color: #94a3b8; cursor: pointer; text-transform: uppercase; white-space: nowrap; border-bottom: 4px solid transparent; }
-        .tab-item.active { color: white; background: rgba(255,255,255,0.05); border-bottom: 4px solid var(--accent); }
-
-        .container { max-width: 600px; margin: auto; padding: 15px; }
-        .page { display: none; animation: fadeIn 0.4s ease; }
-        .page.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
-
-        .form-group { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 25px; }
-        label { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 5px; display: block; }
-        input, select { width: 100%; padding: 14px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: #f8fafc; }
+        /* Telas */
+        #login-screen { position: fixed; inset: 0; background: var(--primary); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .glass-box { background: white; padding: 40px; border-radius: 24px; width: 90%; max-width: 400px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
         
-        .btn { width: 100%; padding: 18px; border: none; border-radius: 10px; color: white; font-weight: 700; font-size: 16px; cursor: pointer; margin-bottom: 10px; }
-        .btn-entry { background: var(--entry); }
-        .btn-exit { background: var(--exit); }
+        .nav-header { position: fixed; top: 0; width: 100%; background: var(--primary); display: flex; z-index: 1000; overflow-x: auto; }
+        .nav-item { flex: 1; text-align: center; padding: 20px 10px; font-size: 10px; font-weight: 800; color: #64748b; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
+        .nav-item.active { color: white; border-bottom: 4px solid var(--accent); background: rgba(255,255,255,0.05); }
 
-        .search-container { margin-bottom: 15px; background: white; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
-        .total-badge { background: var(--primary); color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; display: inline-block; margin-top: 10px; }
+        .container { max-width: 700px; margin: 90px auto 30px; padding: 0 20px; }
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .table-container { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #f8fafc; padding: 12px; text-align: left; font-size: 10px; color: #64748b; border-bottom: 2px solid #f1f5f9; }
-        td { padding: 15px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
-        
-        #reader-entry, #reader-exit { width: 100%; border-radius: 12px; overflow: hidden; background: #000; margin-bottom: 20px; border: 2px solid #cbd5e1; }
+        .card { background: white; border-radius: 20px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 20px; }
+        input, select { width: 100%; padding: 16px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 16px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 18px; border: none; border-radius: 12px; color: white; font-weight: 700; cursor: pointer; font-size: 15px; }
+        .btn-primary { background: var(--accent); }
     </style>
 </head>
 <body>
 
-<nav class="header-tabs">
-    <div id="tab-ent" class="tab-item active" onclick="switchTab('entrada')">Entrada</div>
-    <div id="tab-sai" class="tab-item" onclick="switchTab('saida')">Saída</div>
-    <div id="tab-est" class="tab-item" onclick="switchTab('estoque')">Depósito</div>
-    <div id="tab-fech" class="tab-item" onclick="switchTab('fechamento')">Relatórios</div>
+<div id="login-screen">
+    <div class="glass-box">
+        <h2 style="text-align:center; margin-top:0">Acesso Intelligence</h2>
+        <input type="text" id="user-input" placeholder="Usuário">
+        <input type="password" id="pass-input" placeholder="Senha">
+        <button class="btn btn-primary" onclick="autenticar()">CONECTAR</button>
+    </div>
+</div>
+
+<nav class="nav-header" id="main-nav" style="display:none">
+    <div id="tab-ent" class="nav-item admin-only" onclick="switchTab('entrada')">Entrada</div>
+    <div id="tab-sai" class="nav-item" onclick="switchTab('saida')">Saída</div>
+    <div id="tab-est" class="nav-item" onclick="switchTab('estoque')">Depósito</div>
+    <div id="tab-rel" class="nav-item admin-only" onclick="switchTab('relatorio')">Relatórios</div>
+    <div id="tab-cfg" class="nav-item admin-only" onclick="switchTab('config')">⚙️</div>
 </nav>
 
-<div class="container">
+<div class="container" id="app-content" style="display:none">
+    <div id="page-entrada" class="page"><div id="reader-entry"></div><div class="card">...campos entrada...</div></div>
+    <div id="page-saida" class="page"><div id="reader-exit"></div><div class="card">...campos saída...</div></div>
     
-    <!-- ENTRADA -->
-    <div id="page-entrada" class="page active">
-        <div id="reader-entry"></div>
-        <div class="form-group">
-            <label>Código de Barras</label>
-            <input type="text" id="ent-code" placeholder="Escanear...">
-            <label>Nome do Material (e Marca)</label>
-            <input type="text" id="ent-nome" placeholder="Ex: Arroz Tio João">
-            <label>Setor / Tipo</label>
-            <select id="ent-setor"><option value="SECO">Seco</option><option value="FRIGORIFICO">Frigorífico</option></select>
-            <label>Validade</label>
-            <input type="date" id="ent-validade">
-            <label>Qtd</label>
-            <input type="number" id="ent-qtd" value="1">
-            <button class="btn btn-entry" onclick="processar('ENTRADA')">REGISTRAR ENTRADA</button>
-        </div>
-    </div>
-
-    <!-- SAÍDA -->
-    <div id="page-saida" class="page">
-        <div id="reader-exit"></div>
-        <div class="form-group">
-            <label>Código de Barras</label>
-            <input type="text" id="sai-code" placeholder="Escanear...">
-            <label>Qtd</label>
-            <input type="number" id="sai-qtd" value="1">
-            <button class="btn btn-exit" onclick="processar('SAIDA')">REGISTRAR SAÍDA</button>
-        </div>
-    </div>
-
-    <!-- DEPÓSITO COM FILTROS E SOMA -->
     <div id="page-estoque" class="page">
-        <div class="search-container">
-            <label>Filtrar Material (ex: Arroz)</label>
-            <input type="text" id="filtro-estoque" onkeyup="renderizarEstoque()" placeholder="Digite para filtrar e somar...">
-            <div id="badge-soma-total" class="total-badge" style="display:none;"></div>
+        <div class="card">
+            <input type="text" id="filtro-estoque" onkeyup="renderEstoque()" placeholder="Pesquisar e Somar...">
+            <div id="soma-total" style="font-weight:800; color:var(--accent)"></div>
         </div>
-
-        <label>🥩 FRIGORÍFICO</label>
-        <div class="table-container">
-            <table>
-                <thead><tr><th>Material</th><th>Saldo</th><th>Ações</th></tr></thead>
-                <tbody id="tabela-frigorifico"></tbody>
-            </table>
-        </div>
-
-        <label>📦 SECOS</label>
-        <div class="table-container">
-            <table>
-                <thead><tr><th>Material</th><th>Saldo</th><th>Ações</th></tr></thead>
-                <tbody id="tabela-secos"></tbody>
-            </table>
-        </div>
+        <div id="lista-estoque"></div>
     </div>
 
-    <!-- RELATÓRIOS / FECHAMENTO -->
-    <div id="page-fechamento" class="page">
-        <div id="logs-geral"></div>
+    <!-- ABA CONFIGURAÇÃO (ADMIN) -->
+    <div id="page-config" class="page">
+        <div class="card">
+            <h3>Gerenciar Senhas</h3>
+            <label>Nova Senha Admin</label>
+            <input type="password" id="new-pass-admin">
+            <button class="btn btn-primary" onclick="alterarSenha('admin')">Atualizar Admin</button>
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+            <label>Nova Senha Operador</label>
+            <input type="password" id="new-pass-operador">
+            <button class="btn btn-primary" onclick="alterarSenha('operador')">Atualizar Operador</button>
+        </div>
     </div>
 </div>
 
 <script>
     // CONFIGURAÇÃO FIREBASE
-    // IMPORTANTE: Insira aqui as suas chaves do Firebase
     const firebaseConfig = {
   apiKey: "AIzaSyA-2SH_h57k24EKQXLjOkWsrs70tbSbFGE",
   authDomain: "depositorancho-43b21.firebaseapp.com",
@@ -125,89 +90,52 @@
   messagingSenderId: "883363350930",
   appId: "1:883363350930:web:3da976d452d26837ef994b"
 };
-
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
-    let html5QrCode;
 
-    async function switchTab(tab) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-        document.getElementById('page-' + tab).classList.add('active');
-        document.getElementById('tab-' + tab.substring(0,4)).classList.add('active');
-
-        if (html5QrCode) { try { await html5QrCode.stop(); } catch(e) {} }
-        const divId = tab === 'entrada' ? 'reader-entry' : (tab === 'saida' ? 'reader-exit' : null);
-        if (divId) {
-            html5QrCode = new Html5Qrcode(divId);
-            html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: { width: 250, height: 150 } }, (text) => {
-                const prefix = tab === 'entrada' ? 'ent' : 'sai';
-                document.getElementById(prefix + '-code').value = text;
-            });
-        }
+    // CRIAR SENHAS INICIAIS NO FIREBASE (Rodar apenas uma vez se necessário)
+    function setupInicial() {
+        database.ref('config/usuarios/admin').set({ pass: 'admin123', nivel: 'ADMIN' });
+        database.ref('config/usuarios/saida').set({ pass: 'user123', nivel: 'OPERADOR' });
     }
 
-    function processar(tipo) {
-        const prefix = tipo === 'ENTRADA' ? 'ent' : 'sai';
-        const code = document.getElementById(prefix + '-code').value;
-        const qtd = parseInt(document.getElementById(prefix + '-qtd').value);
-        if (!code || isNaN(qtd)) return;
+    function autenticar() {
+        const u = document.getElementById('user-input').value;
+        const p = document.getElementById('pass-input').value;
 
-        const itemRef = database.ref('estoque/' + code);
-        itemRef.once('value', snap => {
-            let d = snap.val() || { nome: code, saldo: 0, setor: 'SECO' };
-            let novoSaldo = tipo === 'ENTRADA' ? d.saldo + qtd : d.saldo - qtd;
-            if (novoSaldo < 0) return alert("Saldo insuficiente!");
-
-            const updateData = { 
-                saldo: novoSaldo,
-                nome: tipo === 'ENTRADA' ? document.getElementById('ent-nome').value : d.nome,
-                setor: tipo === 'ENTRADA' ? document.getElementById('ent-setor').value : (d.setor || 'SECO'),
-                validade: tipo === 'ENTRADA' ? document.getElementById('ent-validade').value : (d.validade || '')
-            };
-
-            itemRef.update(updateData);
-            database.ref('logs').push({ tipo, code, nome: updateData.nome, qtd, data: new Date().toLocaleString() });
-            document.getElementById(prefix + '-code').value = '';
-        });
-    }
-
-    function renderizarEstoque() {
-        const filtro = document.getElementById('filtro-estoque').value.toLowerCase();
-        database.ref('estoque').once('value', snap => {
-            const tbSecos = document.getElementById('tabela-secos');
-            const tbFrigo = document.getElementById('tabela-frigorifico');
-            const badgeSoma = document.getElementById('badge-soma-total');
-            
-            tbSecos.innerHTML = ''; tbFrigo.innerHTML = '';
-            let somaFiltrada = 0;
-            let temFiltro = filtro.length > 0;
-
-            snap.forEach(c => {
-                const i = c.val();
-                const nomeLower = i.nome.toLowerCase();
-                
-                if (nomeLower.includes(filtro)) {
-                    if (temFiltro) somaFiltrada += i.saldo;
-                    
-                    const row = `<tr><td><b>${i.nome}</b></td><td align="center">${i.saldo}</td><td><button onclick="database.ref('estoque/${c.key}').remove()">🗑️</button></td></tr>`;
-                    
-                    if (i.setor === 'FRIGORIFICO') tbFrigo.innerHTML += row;
-                    else tbSecos.innerHTML += row;
-                }
-            });
-
-            if (temFiltro) {
-                badgeSoma.style.display = 'inline-block';
-                badgeSoma.innerHTML = `SOMA TOTAL (${filtro.toUpperCase()}): ${somaFiltrada}`;
+        database.ref('config/usuarios/' + u).once('value', snap => {
+            const user = snap.val();
+            if(user && user.pass === p) {
+                iniciarApp(user.nivel);
             } else {
-                badgeSoma.style.display = 'none';
+                alert("Usuário ou senha incorretos");
             }
         });
     }
 
-    database.ref('estoque').on('value', renderizarEstoque);
-    window.onload = () => switchTab('entrada');
+    function alterarSenha(perfil) {
+        const novaSenha = perfil === 'admin' ? document.getElementById('new-pass-admin').value : document.getElementById('new-pass-operador').value;
+        const dbPath = perfil === 'admin' ? 'admin' : 'saida';
+        
+        if(!novaSenha) return alert("Digite a nova senha");
+        
+        database.ref('config/usuarios/' + dbPath).update({ pass: novaSenha })
+            .then(() => alert("Senha do " + perfil + " alterada com sucesso!"))
+            .catch(() => alert("Erro ao alterar senha"));
+    }
+
+    function iniciarApp(nivel) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('main-nav').style.display = 'flex';
+        document.getElementById('app-content').style.display = 'block';
+        if(nivel === 'OPERADOR') {
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+            switchTab('saida');
+        } else {
+            switchTab('entrada');
+        }
+    }
+    // ... manter funções de switchTab, processar e renderEstoque da v7 ...
 </script>
 </body>
 </html>
