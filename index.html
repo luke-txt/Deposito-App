@@ -6,11 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Depósito Pro - Lucas</title>
     
-    <!-- SDKs do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    
-    <!-- Biblioteca do Scanner -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     
     <style>
@@ -22,154 +19,40 @@
             --bg: #f1f5f9;
         }
         
-        body { 
-            font-family: 'Inter', -apple-system, sans-serif; 
-            background: var(--bg); 
-            margin: 0; 
-            padding-top: 70px; /* Espaço para as abas no topo */
-        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding-top: 70px; }
 
-        /* Navegação no Topo */
-        .header-tabs { 
-            position: fixed; 
-            top: 0; 
-            width: 100%; 
-            background: var(--primary); 
-            display: flex; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2); 
-            z-index: 1000; 
-        }
-        
-        .tab-item { 
-            flex: 1; 
-            text-align: center; 
-            padding: 20px 0; 
-            font-size: 13px; 
-            font-weight: 700; 
-            color: #94a3b8; 
-            cursor: pointer; 
-            text-transform: uppercase; 
-            transition: all 0.3s ease;
-            border-bottom: 4px solid transparent;
-        }
-        
-        .tab-item.active { 
-            color: white; 
-            background: rgba(255,255,255,0.05); 
-            border-bottom: 4px solid var(--accent); 
-        }
+        .header-tabs { position: fixed; top: 0; width: 100%; background: var(--primary); display: flex; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 1000; overflow-x: auto; }
+        .tab-item { flex: 1; text-align: center; padding: 20px 10px; font-size: 11px; font-weight: 700; color: #94a3b8; cursor: pointer; text-transform: uppercase; white-space: nowrap; border-bottom: 4px solid transparent; }
+        .tab-item.active { color: white; background: rgba(255,255,255,0.05); border-bottom: 4px solid var(--accent); }
 
-        .container { 
-            max-width: 600px; 
-            margin: auto; 
-            padding: 15px; 
-        }
+        .container { max-width: 600px; margin: auto; padding: 15px; }
+        .page { display: none; animation: fadeIn 0.4s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
 
-        .page { 
-            display: none; 
-            animation: fadeIn 0.4s ease; 
-        }
-        
-        .page.active { 
-            display: block; 
-        }
-
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(10px); } 
-            to { opacity: 1; transform: translateY(0); } 
-        }
-
-        /* Scanner e Form */
-        #reader-entry, #reader-exit { 
-            width: 100%; 
-            border-radius: 12px; 
-            overflow: hidden; 
-            background: #000; 
-            margin-bottom: 20px; 
-            border: 2px solid #cbd5e1; 
-        }
-        
-        .form-group { 
-            background: white; 
-            padding: 20px; 
-            border-radius: 15px; 
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
-            margin-bottom: 25px; 
-        }
+        #reader-entry, #reader-exit { width: 100%; border-radius: 12px; overflow: hidden; background: #000; margin-bottom: 20px; border: 2px solid #cbd5e1; }
+        .form-group { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 25px; }
         
         label { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 5px; display: block; }
+        input, select { width: 100%; padding: 14px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: #f8fafc; }
         
-        input { 
-            width: 100%; 
-            padding: 14px; 
-            margin-bottom: 15px; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 8px; 
-            font-size: 16px; 
-            box-sizing: border-box; 
-            outline: none;
-            background: #f8fafc;
-        }
-        
-        input:focus { border-color: var(--accent); background: white; }
-        
-        .btn { 
-            width: 100%; 
-            padding: 18px; 
-            border: none; 
-            border-radius: 10px; 
-            color: white; 
-            font-weight: 700; 
-            font-size: 16px; 
-            cursor: pointer; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        
+        .btn { width: 100%; padding: 18px; border: none; border-radius: 10px; color: white; font-weight: 700; font-size: 16px; cursor: pointer; }
         .btn-entry { background: var(--entry); }
         .btn-exit { background: var(--exit); }
-        .btn:active { transform: scale(0.98); }
 
-        /* Lista de Logs */
-        .log-title { font-size: 14px; font-weight: 700; color: var(--primary); margin: 20px 0 10px 5px; text-transform: uppercase; }
-        
-        .card { 
-            background: white; 
-            padding: 15px; 
-            border-radius: 12px; 
-            margin-bottom: 10px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            border-left: 6px solid #64748b;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        
+        .card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #64748b; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .card.ENTRY { border-left-color: var(--entry); }
         .card.EXIT { border-left-color: var(--exit); }
         
-        .card-data b { display: block; font-size: 15px; color: #1e293b; }
-        .card-data span { font-size: 12px; color: #94a3b8; }
-        
-        .delete-btn { 
-            background: #fee2e2; 
-            border: none; 
-            color: #ef4444; 
-            width: 40px; 
-            height: 40px; 
-            border-radius: 8px; 
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-        }
+        .delete-btn { background: #fee2e2; border: none; color: #ef4444; width: 40px; height: 40px; border-radius: 8px; cursor: pointer; font-size: 18px; }
 
-        /* Tabela de Estoque */
         .table-container { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         table { width: 100%; border-collapse: collapse; }
         th { background: #f8fafc; padding: 15px; text-align: left; font-size: 12px; color: #64748b; border-bottom: 2px solid #f1f5f9; }
         td { padding: 18px 15px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
-        .stock-badge { background: #e2e8f0; padding: 4px 10px; border-radius: 6px; font-weight: 800; color: var(--primary); }
+        
+        .stock-delete-btn { background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 16px; margin-left: 10px; }
+        .stock-delete-btn:hover { color: var(--exit); }
     </style>
 </head>
 <body>
@@ -177,42 +60,53 @@
 <nav class="header-tabs">
     <div id="tab-ent" class="tab-item active" onclick="switchTab('entrada')">Entrada</div>
     <div id="tab-sai" class="tab-item" onclick="switchTab('saida')">Saída</div>
-    <div id="tab-est" class="tab-item" onclick="switchTab('estoque')">Estoque</div>
+    <div id="tab-est" class="tab-item" onclick="switchTab('estoque')">Depósito</div>
+    <div id="tab-his" class="tab-item" onclick="switchTab('historico')">Histórico</div>
 </nav>
 
 <div class="container">
-    
-    <!-- ABA: ENTRADA -->
     <div id="page-entrada" class="page active">
         <div id="reader-entry"></div>
         <div class="form-group">
             <label>Código de Barras</label>
-            <input type="text" id="ent-code" placeholder="Escanear produto...">
+            <input type="text" id="ent-code" placeholder="Escanear...">
             <label>Nome do Material</label>
-            <input type="text" id="ent-nome" placeholder="Ex: Tijolo, Tinta, etc.">
+            <input type="text" id="ent-nome" placeholder="Ex: Arroz">
+            <label>Unidade de Medida</label>
+            <select id="ent-unidade">
+                <option value="kg">Quilograma (kg)</option>
+                <option value="g">Grama (g)</option>
+                <option value="un">Unidade (un)</option>
+                <option value="lata">Lata</option>
+                <option value="litro">Litro (l)</option>
+                <option value="pacote">Pacote</option>
+            </select>
             <label>Quantidade</label>
             <input type="number" id="ent-qtd" value="1">
             <button class="btn btn-entry" onclick="processar('ENTRADA')">REGISTRAR ENTRADA</button>
         </div>
-        <div class="log-title">Entradas Recentes</div>
-        <div id="logs-entrada"></div>
     </div>
 
-    <!-- ABA: SAÍDA -->
     <div id="page-saida" class="page">
         <div id="reader-exit"></div>
         <div class="form-group">
             <label>Código de Barras</label>
-            <input type="text" id="sai-code" placeholder="Escanear produto...">
-            <label>Quantidade para Retirar</label>
+            <input type="text" id="sai-code" placeholder="Escanear...">
+            <label>Unidade de Medida</label>
+            <select id="sai-unidade">
+                <option value="kg">Quilograma (kg)</option>
+                <option value="g">Grama (g)</option>
+                <option value="un">Unidade (un)</option>
+                <option value="lata">Lata</option>
+                <option value="litro">Litro (l)</option>
+                <option value="pacote">Pacote</option>
+            </select>
+            <label>Quantidade</label>
             <input type="number" id="sai-qtd" value="1">
             <button class="btn btn-exit" onclick="processar('SAIDA')">REGISTRAR SAÍDA</button>
         </div>
-        <div class="log-title">Saídas Recentes</div>
-        <div id="logs-saida"></div>
     </div>
 
-    <!-- ABA: ESTOQUE -->
     <div id="page-estoque" class="page">
         <div class="table-container">
             <table>
@@ -220,6 +114,7 @@
                     <tr>
                         <th>Material</th>
                         <th style="text-align:center">Saldo</th>
+                        <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody id="tabela-estoque"></tbody>
@@ -227,19 +122,20 @@
         </div>
     </div>
 
+    <div id="page-historico" class="page">
+        <div id="logs-geral"></div>
+    </div>
 </div>
 
 <script>
-    // === CONFIGURAÇÃO FIREBASE ===
-    // IMPORTANTE: Insira suas credenciais abaixo
     const firebaseConfig = {
-     apiKey: "AIzaSyA-2SH_h57k24EKQXLjOkWsrs70tbSbFGE",
-    authDomain: "depositorancho-43b21.firebaseapp.com",
-    databaseURL: "https://depositorancho-43b21-default-rtdb.firebaseio.com",
-    projectId: "depositorancho-43b21",
-    storageBucket: "depositorancho-43b21.firebasestorage.app",
-    messagingSenderId: "883363350930",
-    appId: "1:883363350930:web:3da976d452d26837ef994b"
+        apiKey: "COLE_AQUI",
+        authDomain: "COLE_AQUI",
+        databaseURL: "COLE_AQUI",
+        projectId: "COLE_AQUI",
+        storageBucket: "COLE_AQUI",
+        messagingSenderId: "COLE_AQUI",
+        appId: "COLE_AQUI"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -249,132 +145,118 @@
     const scannerConfig = { fps: 20, qrbox: { width: 280, height: 160 }, aspectRatio: 1.0 };
 
     async function switchTab(tab) {
-        // UI das abas
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-        
         document.getElementById('page-' + tab).classList.add('active');
-        if(tab === 'entrada') document.getElementById('tab-ent').classList.add('active');
-        if(tab === 'saida') document.getElementById('tab-sai').classList.add('active');
-        if(tab === 'estoque') document.getElementById('tab-est').classList.add('active');
+        document.getElementById('tab-' + tab.substring(0,3)).classList.add('active');
 
-        // Reiniciar Scanner
-        if (html5QrCode) {
-            try { await html5QrCode.stop(); } catch(e) {}
-        }
-        
+        if (html5QrCode) { try { await html5QrCode.stop(); } catch(e) {} }
         const divId = tab === 'entrada' ? 'reader-entry' : (tab === 'saida' ? 'reader-exit' : null);
         if (divId) {
             html5QrCode = new Html5Qrcode(divId);
             html5QrCode.start({ facingMode: "environment" }, scannerConfig, (text) => {
                 const prefix = tab === 'entrada' ? 'ent' : 'sai';
                 document.getElementById(prefix + '-code').value = text;
-                
-                // Busca nome se existir no banco
                 database.ref('estoque/' + text).once('value', snap => {
                     if(snap.exists() && tab === 'entrada') {
                         document.getElementById('ent-nome').value = snap.val().nome;
+                        if(snap.val().unidade) document.getElementById('ent-unidade').value = snap.val().unidade;
+                    }
+                    if(snap.exists() && tab === 'saida' && snap.val().unidade) {
+                        document.getElementById('sai-unidade').value = snap.val().unidade;
                     }
                 });
             });
         }
     }
 
-    // Inicia na Entrada
     window.onload = () => switchTab('entrada');
 
     function processar(tipo) {
         const prefix = tipo === 'ENTRADA' ? 'ent' : 'sai';
         const code = document.getElementById(prefix + '-code').value;
         const qtd = parseInt(document.getElementById(prefix + '-qtd').value);
+        const unidade = document.getElementById(prefix + '-unidade').value;
         const inputNome = tipo === 'ENTRADA' ? document.getElementById('ent-nome').value : '';
 
-        if (!code || isNaN(qtd) || qtd <= 0) return alert("Por favor, preencha os dados corretamente.");
+        if (!code || isNaN(qtd)) return alert("Dados inválidos!");
 
         const itemRef = database.ref('estoque/' + code);
-        
         itemRef.once('value', snap => {
-            let dados = snap.val() || { nome: (inputNome || code), saldo: 0 };
+            let dados = snap.val() || { nome: (inputNome || code), saldo: 0, unidade: unidade };
             let novoSaldo = tipo === 'ENTRADA' ? dados.saldo + qtd : dados.saldo - qtd;
 
-            if (novoSaldo < 0) return alert("Erro: Saldo insuficiente em estoque!");
+            if (novoSaldo < 0) return alert("Saldo insuficiente!");
 
-            // Atualiza o saldo
-            itemRef.update({ nome: dados.nome, saldo: novoSaldo });
-
-            // Grava o log da movimentação
+            itemRef.update({ nome: dados.nome, saldo: novoSaldo, unidade: unidade });
             database.ref('logs').push({
-                tipo, 
-                code, 
-                nome: dados.nome, 
-                qtd, 
-                data: new Date().toLocaleString(),
-                timestamp: Date.now()
+                tipo, code, nome: dados.nome, qtd, unidade, data: new Date().toLocaleString(), timestamp: Date.now()
             });
 
-            // Limpa campos
             document.getElementById(prefix + '-code').value = '';
-            if(tipo === 'ENTRADA') document.getElementById('ent-nome').value = '';
         });
     }
 
+    // EXCLUIR ITEM DO DEPÓSITO DEFINITIVAMENTE
+    function excluirItemEstoque(code, nome) {
+        if (!confirm("Deseja apagar " + nome + " do depósito? Isso removerá o item e seu saldo permanentemente.")) return;
+        database.ref('estoque/' + code).remove();
+    }
+
+    // EXCLUIR LOG DO HISTÓRICO (Com estorno opcional)
     function apagarLog(id, code, qtd, tipo) {
-        if (!confirm("Tem certeza que deseja cancelar esta ação? O estoque será ajustado automaticamente.")) return;
-        
+        if (!confirm("Deseja remover este registro do histórico? (O saldo será ajustado no depósito)")) return;
         const itemRef = database.ref('estoque/' + code);
         itemRef.once('value', snap => {
-            if(!snap.exists()) return;
-            const saldoAtual = snap.val().saldo;
-            const estorno = tipo === 'ENTRADA' ? saldoAtual - qtd : saldoAtual + qtd;
-            
-            // Ajusta estoque e remove log
-            itemRef.update({ saldo: estorno });
+            if(snap.exists()){
+                const saldo = snap.val().saldo;
+                itemRef.update({ saldo: tipo === 'ENTRADA' ? saldo - qtd : saldo + qtd });
+            }
             database.ref('logs/' + id).remove();
         });
     }
 
-    // Monitoramento Tempo Real: Logs
-    database.ref('logs').limitToLast(15).on('value', snap => {
-        const entDiv = document.getElementById('logs-entrada');
-        const saiDiv = document.getElementById('logs-saida');
-        entDiv.innerHTML = ''; saiDiv.innerHTML = '';
-
-        snap.forEach(child => {
-            const log = child.val();
-            const id = child.key;
-            const cardHtml = `
-                <div class="card ${log.tipo}">
-                    <div class="card-data">
-                        <b>${log.nome} (x${log.qtd})</b>
-                        <span>${log.data.split(', ')[1]}</span>
-                    </div>
-                    <button class="delete-btn" onclick="apagarLog('${id}', '${log.code}', ${log.qtd}, '${log.tipo}')">🗑️</button>
-                </div>`;
-            
-            if (log.tipo === 'ENTRADA') entDiv.innerHTML = cardHtml + entDiv.innerHTML;
-            else saiDiv.innerHTML = cardHtml + saiDiv.innerHTML;
-        });
-    });
-
-    // Monitoramento Tempo Real: Estoque
+    // SINCRONIZAÇÃO ESTOQUE (ORDEM ALFABÉTICA)
     database.ref('estoque').on('value', snap => {
-        const tabela = document.getElementById('tabela-estoque');
-        tabela.innerHTML = '';
-        snap.forEach(child => {
-            const item = child.val();
-            tabela.innerHTML += `
+        const tb = document.getElementById('tabela-estoque');
+        tb.innerHTML = '';
+        let itens = [];
+        snap.forEach(child => { 
+            let item = child.val();
+            item.code = child.key;
+            itens.push(item);
+        });
+        
+        itens.sort((a, b) => a.nome.localeCompare(b.nome));
+
+        itens.forEach(item => {
+            tb.innerHTML += `
                 <tr>
-                    <td>
-                        <b style="color:#1e293b">${item.nome}</b><br>
-                        <small style="color:#94a3b8; font-family:monospace">${child.key}</small>
-                    </td>
-                    <td style="text-align:center">
-                        <span class="stock-badge">${item.saldo}</span>
-                    </td>
+                    <td><b>${item.nome}</b><br><small>${item.code}</small></td>
+                    <td style="text-align:center"><b>${item.saldo} ${item.unidade || ''}</b></td>
+                    <td><button class="stock-delete-btn" onclick="excluirItemEstoque('${item.code}', '${item.nome}')">🗑️</button></td>
                 </tr>`;
         });
     });
-</script>
 
+    // SINCRONIZAÇÃO HISTÓRICO
+    database.ref('logs').limitToLast(30).on('value', snap => {
+        const histDiv = document.getElementById('logs-geral');
+        histDiv.innerHTML = '';
+        snap.forEach(child => {
+            const log = child.val();
+            const cor = log.tipo === 'ENTRADA' ? 'ENTRY' : 'EXIT';
+            const acao = log.tipo === 'ENTRADA' ? 'Adicionado' : 'Saiu';
+            histDiv.innerHTML = `
+                <div class="card ${cor}">
+                    <div>
+                        <b>${acao} ${log.qtd} ${log.unidade} de ${log.nome}</b>
+                        <br><small>${log.data}</small>
+                    </div>
+                    <button class="delete-btn" onclick="apagarLog('${child.key}','${log.code}',${log.qtd},'${log.tipo}')">✕</button>
+                </div>` + histDiv.innerHTML;
+        });
+    });
+</script>
 </body>
 </html>
