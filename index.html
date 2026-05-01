@@ -195,6 +195,18 @@ tr:hover td{background:var(--surface2)}
           <option value="FRIGORIFICO">🥩 Frigorífico</option>
         </select>
       </div>
+      <div class="field"><label>Unidade de Medida</label>
+        <select id="ent-unidade">
+          <option value="un">Unidade (un)</option>
+          <option value="kg">Quilograma (kg)</option>
+          <option value="g">Gramas (g)</option>
+          <option value="L">Litro (L)</option>
+          <option value="ml">Mililitro (ml)</option>
+          <option value="lata">Lata</option>
+          <option value="cx">Caixa (cx)</option>
+          <option value="pct">Pacote (pct)</option>
+        </select>
+      </div>
       <div class="field"><label>Quantidade</label><input type="number" id="ent-qtd" value="1" min="1"></div>
       <button class="btn btn-green" id="btn-entrada">✓ CONFIRMAR ENTRADA</button>
     </div>
@@ -307,6 +319,18 @@ tr:hover td{background:var(--surface2)}
       <select id="edit-setor">
         <option value="SECO">📦 Secos</option>
         <option value="FRIGORIFICO">🥩 Frigorífico</option>
+      </select>
+    </div>
+    <div class="field"><label>Unidade de Medida</label>
+      <select id="edit-unidade">
+        <option value="un">Unidade (un)</option>
+        <option value="kg">Quilograma (kg)</option>
+        <option value="g">Gramas (g)</option>
+        <option value="L">Litro (L)</option>
+        <option value="ml">Mililitro (ml)</option>
+        <option value="lata">Lata</option>
+        <option value="cx">Caixa (cx)</option>
+        <option value="pct">Pacote (pct)</option>
       </select>
     </div>
     <div class="field"><label>Quantidade em estoque</label><input type="number" id="edit-saldo" min="0"></div>
@@ -494,7 +518,8 @@ function carregarCache() {
         nome: v.nome || c.key,
         saldo: Number(v.saldo) || 0,
         setor: v.setor || 'SECO',
-        validade: v.validade || ''
+        validade: v.validade || '',
+        unidade: v.unidade || 'un'
       };
     });
     cacheReady = true;
@@ -581,7 +606,7 @@ function onSaiBuscaInput() {
     db.ref('estoque').once('value').then(snap => {
       snap.forEach(c => {
         const v = c.val(); if (!v) return;
-        cache[c.key] = { nome: v.nome||c.key, saldo: Number(v.saldo)||0, setor: v.setor||'SECO', validade: v.validade||'' };
+        cache[c.key] = { nome: v.nome||c.key, saldo: Number(v.saldo)||0, setor: v.setor||'SECO', validade: v.validade||'', unidade: v.unidade||'un' };
       });
       cacheReady = true;
       const cur = document.getElementById('sai-busca').value.trim().toLowerCase();
@@ -619,7 +644,7 @@ function buildAcList(val) {
 
     const badge = document.createElement('span');
     badge.className = 'badge ' + (item.saldo > 0 ? 'b-green' : 'b-red');
-    badge.textContent = item.saldo + ' un.';
+    badge.textContent = item.saldo + ' ' + (item.unidade || 'un');
 
     el.append(left, badge);
     el.addEventListener('mousedown', ev => { ev.preventDefault(); selecionarItem(code); });
@@ -648,7 +673,7 @@ function selecionarItem(code) {
   document.getElementById('ac-list').style.display = 'none';
   document.getElementById('sai-preview-box').style.display = 'block';
   document.getElementById('prev-nome').textContent = item.nome;
-  document.getElementById('prev-saldo').textContent = item.saldo + ' em estoque';
+  document.getElementById('prev-saldo').textContent = item.saldo + ' ' + (item.unidade || 'un') + ' em estoque';
   document.getElementById('prev-saldo').className = 'badge ' + (item.saldo > 0 ? 'b-green' : 'b-red');
   const dias = diasVencer(item.validade);
   const vel = document.getElementById('prev-val');
@@ -667,8 +692,10 @@ function processar(tipo) {
     if (!code) { toast('Informe o código do produto.', 'err'); return; }
     if (!nome) { toast('Informe o nome do produto.', 'err'); return; }
     gravarMovimento('ENTRADA', code, {
-      nome, setor: document.getElementById('ent-setor').value,
-      validade: document.getElementById('ent-val').value
+      nome, 
+      setor: document.getElementById('ent-setor').value,
+      validade: document.getElementById('ent-val').value,
+      unidade: document.getElementById('ent-unidade').value
     }, qtd);
     return;
   }
@@ -692,16 +719,17 @@ function gravarMovimento(tipo, code, dadosEntrada, qtd) {
       toast('Produto não existe no banco. Código: ' + code, 'err'); return;
     }
 
-    const base = atual || { nome: dadosEntrada.nome, saldo: 0, setor: dadosEntrada.setor, validade: dadosEntrada.validade };
+    const base = atual || { nome: dadosEntrada.nome, saldo: 0, setor: dadosEntrada.setor, validade: dadosEntrada.validade, unidade: dadosEntrada.unidade||'un' };
     const novoSaldo = tipo === 'ENTRADA' ? base.saldo + qtd : base.saldo - qtd;
 
-    if (novoSaldo < 0) { toast('Saldo insuficiente! Há apenas ' + base.saldo + ' un.', 'err'); return; }
+    if (novoSaldo < 0) { toast('Saldo insuficiente! Há apenas ' + base.saldo + ' ' + (base.unidade||'un') + '.', 'err'); return; }
 
     const novosDados = {
       nome:    tipo === 'ENTRADA' ? dadosEntrada.nome    : base.nome,
       saldo:   novoSaldo,
       setor:   tipo === 'ENTRADA' ? dadosEntrada.setor   : base.setor,
-      validade:tipo === 'ENTRADA' ? dadosEntrada.validade: base.validade
+      validade:tipo === 'ENTRADA' ? dadosEntrada.validade: base.validade,
+      unidade: tipo === 'ENTRADA' ? dadosEntrada.unidade : (base.unidade || 'un')
     };
 
     const updates = {};
@@ -716,6 +744,7 @@ function gravarMovimento(tipo, code, dadosEntrada, qtd) {
       if (tipo === 'ENTRADA') {
         ['ent-code','ent-nome','ent-val'].forEach(id => document.getElementById(id).value = '');
         document.getElementById('ent-qtd').value = 1;
+        document.getElementById('ent-unidade').value = 'un';
       } else {
         document.getElementById('sai-code').value = '';
         document.getElementById('sai-busca').value = '';
@@ -751,7 +780,7 @@ function renderEstoque() {
   const somaBar = document.getElementById('soma-bar');
   if (filtro && itens.length) {
     const total = itens.reduce((s,[,i]) => s+(i.saldo||0), 0);
-    document.getElementById('soma-val').textContent = total + ' un.';
+    document.getElementById('soma-val').textContent = total;
     document.getElementById('soma-sub').textContent = itens.length + ' produto' + (itens.length!==1?'s':'');
     somaBar.style.display = 'flex';
   } else {
@@ -772,7 +801,6 @@ function renderLista(itens) {
     const dias = diasVencer(item.validade);
     const vc = dias!==null && dias<=0 ? 'venc' : dias!==null && dias<=7 ? 'venc' : dias!==null && dias<=30 ? 'venc-soon' : '';
     const tr = document.createElement('tr');
-    // Use data-edit-code instead of onclick to avoid any escaping issues
     tr.innerHTML = `
       <td>
         <div style="display:flex;align-items:center;gap:8px">
@@ -783,7 +811,7 @@ function renderLista(itens) {
           <button class="btn-edit" data-edit-code="${code}" title="Editar">✏️</button>
         </div>
       </td>
-      <td style="text-align:center"><span class="badge ${item.saldo>0?'b-green':'b-red'}">${item.saldo}</span></td>
+      <td style="text-align:center"><span class="badge ${item.saldo>0?'b-green':'b-red'}">${item.saldo} ${item.unidade||'un'}</span></td>
       <td class="${vc}">${item.validade||'—'}</td>`;
     (item.setor==='FRIGORIFICO' ? frigo : secos).appendChild(tr);
   });
@@ -801,7 +829,7 @@ function renderVencimentos(itens) {
     const dias = diasVencer(item.validade);
     if (dias === null || dias > 30) return;
     const setor = item.setor === 'FRIGORIFICO' ? '🥩' : '📦';
-    const row = `<tr><td><b>${item.nome}</b></td><td>${setor}</td><td class="${dias<=7?'venc':'venc-soon'}">${item.validade} (${dias<=0?'VENCIDO':dias+'d'})</td><td style="text-align:center">${item.saldo}</td></tr>`;
+    const row = `<tr><td><b>${item.nome}</b></td><td>${setor}</td><td class="${dias<=7?'venc':'venc-soon'}">${item.validade} (${dias<=0?'VENCIDO':dias+'d'})</td><td style="text-align:center">${item.saldo} ${item.unidade||'un'}</td></tr>`;
     (dias <= 7 ? crit : aviso).innerHTML += row;
   });
   if (!crit.innerHTML) crit.innerHTML = '<tr><td colspan="4" class="empty">✅ Nenhum crítico</td></tr>';
@@ -816,7 +844,7 @@ function renderCodigos(itens) {
       <div class="bc-nome">${item.nome}</div>
       <div class="bc-code">${code}</div>
       ${barcodeVisual(code)}
-      <div class="bc-saldo">Saldo: <b>${item.saldo}</b> | ${item.setor==='FRIGORIFICO'?'🥩':'📦'}</div>
+      <div class="bc-saldo">Saldo: <b>${item.saldo} ${item.unidade||'un'}</b> | ${item.setor==='FRIGORIFICO'?'🥩':'📦'}</div>
     </div>`).join('');
 }
 
@@ -830,6 +858,7 @@ function abrirEditar(code) {
   document.getElementById('edit-val').value = item.validade || '';
   document.getElementById('edit-setor').value = item.setor || 'SECO';
   document.getElementById('edit-saldo').value = item.saldo || 0;
+  document.getElementById('edit-unidade').value = item.unidade || 'un';
   document.getElementById('edit-modal').classList.add('open');
 }
 
@@ -844,9 +873,11 @@ function salvarEdicao() {
   const validade = document.getElementById('edit-val').value;
   const setor = document.getElementById('edit-setor').value;
   const saldo = parseInt(document.getElementById('edit-saldo').value);
+  const unidade = document.getElementById('edit-unidade').value;
+  
   if (!nome) { toast('Nome não pode ser vazio.', 'err'); return; }
   if (isNaN(saldo) || saldo < 0) { toast('Quantidade inválida.', 'err'); return; }
-  db.ref('estoque/' + editCode).update({ nome, validade, setor, saldo })
+  db.ref('estoque/' + editCode).update({ nome, validade, setor, saldo, unidade })
     .then(() => { toast('✅ Produto atualizado!'); fecharModal(); })
     .catch(err => toast('Erro: ' + err.code, 'err'));
 }
