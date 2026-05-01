@@ -5,68 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Depósito Aprov</title>
     
-    <!-- Metas para Ícone App -->
+    <!-- Ícone e Configurações de App -->
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2897/2897785.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Depósito Aprov">
     
-    <!-- Google Fonts & SDKs -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
 
     <style>
-        :root { 
-            --primary: #0f172a; --accent: #3b82f6; --entry: #10b981; --exit: #ef4444; 
-            --bg: #f8fafc; --card: #ffffff; --text: #1e293b;
-        }
+        :root { --primary: #0f172a; --accent: #3b82f6; --entry: #10b981; --exit: #ef4444; --bg: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding-top: 80px; }
         
-        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; color: var(--text); }
-        
-        /* Login Overlay Profissional */
+        /* Login */
         #login-screen { position: fixed; inset: 0; background: var(--primary); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .login-box { background: white; padding: 40px; border-radius: 24px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
-        
-        /* Navegação Tecnológica */
-        .nav-header { position: fixed; top: 0; width: 100%; background: var(--primary); display: flex; z-index: 1000; overflow-x: auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        .nav-item { flex: 1; text-align: center; padding: 20px 10px; font-size: 10px; font-weight: 800; color: #64748b; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
-        .nav-item.active { color: white; border-bottom: 4px solid var(--accent); background: rgba(255,255,255,0.05); }
+        .login-box { background: white; padding: 40px; border-radius: 24px; width: 100%; max-width: 400px; text-align: center; }
 
-        .container { max-width: 700px; margin: 90px auto 30px; padding: 0 20px; }
+        /* Navegação */
+        .nav-header { position: fixed; top: 0; width: 100%; background: var(--primary); display: flex; z-index: 1000; }
+        .nav-item { flex: 1; text-align: center; padding: 20px 10px; font-size: 10px; font-weight: 800; color: #64748b; cursor: pointer; text-transform: uppercase; }
+        .nav-item.active { color: white; border-bottom: 4px solid var(--accent); }
+
+        /* Container e Cards */
+        .container { max-width: 700px; margin: auto; padding: 0 20px; }
         .page { display: none; }
-        .page.active { display: block; animation: slideUp 0.5s ease; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .page.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* Estilo dos Cards */
-        .glass-card { background: var(--card); border-radius: 20px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 20px; }
-        input, select { width: 100%; padding: 16px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 16px; background: #f1f5f9; box-sizing: border-box; outline: none; transition: 0.3s; }
-        input:focus { border-color: var(--accent); background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+        .card { background: white; border-radius: 20px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        input, select { width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 16px; box-sizing: border-box; }
         
-        .btn { width: 100%; padding: 18px; border: none; border-radius: 12px; color: white; font-weight: 700; cursor: pointer; transition: 0.3s; font-size: 15px; }
+        .btn { width: 100%; padding: 18px; border: none; border-radius: 12px; color: white; font-weight: 700; cursor: pointer; }
         .btn-primary { background: var(--accent); }
         .btn-entry { background: var(--entry); }
         .btn-exit { background: var(--exit); }
+
+        /* Tabelas por Setor */
+        .sector-title { font-size: 12px; font-weight: 800; color: #64748b; margin: 25px 0 10px 5px; display: block; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 15px; overflow: hidden; margin-bottom: 20px; }
+        th { text-align: left; font-size: 10px; color: #94a3b8; padding: 12px; border-bottom: 2px solid #f1f5f9; }
+        td { padding: 15px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
         
-        /* Tabelas */
-        .table-container { overflow-x: auto; background: white; border-radius: 15px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; font-size: 11px; color: #94a3b8; padding: 12px; text-transform: uppercase; border-bottom: 2px solid #f1f5f9; }
-        td { padding: 16px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
-        
-        #reader-entry, #reader-exit { width: 100%; border-radius: 16px; overflow: hidden; background: #000; margin-bottom: 20px; border: 2px solid #cbd5e1; }
-        .total-badge { background: var(--primary); color: white; padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; display: inline-block; margin-top: 10px; }
+        /* Alerta de Validade */
+        .vencendo { color: var(--exit); font-weight: 800; animation: blink 1.5s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        #reader-entry, #reader-exit { width: 100%; border-radius: 16px; overflow: hidden; margin-bottom: 20px; background: #000; }
     </style>
 </head>
 <body>
 
-<!-- TELA DE LOGIN (PROTEÇÃO INVISÍVEL) -->
 <div id="login-screen">
     <div class="login-box">
-        <h2 style="margin-top:0; color:var(--primary)">Depósito Aprov</h2>
-        <p style="color:#64748b; font-size:14px">Conecte-se para gerenciar o inventário</p>
+        <h2 style="margin-top:0">Depósito Aprov</h2>
         <input type="text" id="user-input" placeholder="Usuário">
         <input type="password" id="pass-input" placeholder="Senha">
-        <button class="btn btn-primary" onclick="autenticar()">ACESSAR SISTEMA</button>
+        <button class="btn btn-primary" onclick="autenticar()">ENTRAR NO SISTEMA</button>
     </div>
 </div>
 
@@ -75,66 +71,55 @@
     <div id="tab-sai" class="nav-item" onclick="switchTab('saida')">Saída</div>
     <div id="tab-est" class="nav-item" onclick="switchTab('estoque')">Depósito</div>
     <div id="tab-rel" class="nav-item admin-only" onclick="switchTab('relatorio')">Relatórios</div>
-    <div id="tab-his" class="nav-item admin-only" onclick="switchTab('historico')">Diário</div>
 </nav>
 
 <div class="container" id="app-content" style="display:none">
     
-    <!-- ENTRADA (ADMIN) -->
     <div id="page-entrada" class="page">
         <div id="reader-entry"></div>
-        <div class="glass-card">
-            <label style="font-weight:700; font-size:12px">REGISTRO DE MATERIAL</label>
+        <div class="card">
             <input type="text" id="ent-code" placeholder="Código de Barras">
-            <input type="text" id="ent-nome" placeholder="Nome do Material e Marca">
+            <input type="text" id="ent-nome" placeholder="Material e Marca">
             <input type="date" id="ent-validade">
-            <select id="ent-setor"><option value="SECO">Setor Secos</option><option value="FRIGORIFICO">Setor Frigorífico</option></select>
+            <select id="ent-setor"><option value="SECO">📦 Secos</option><option value="FRIGORIFICO">🥩 Frigorífico</option></select>
             <input type="number" id="ent-qtd" value="1">
-            <button class="btn btn-entry" onclick="processar('ENTRADA')">CONFIRMAR ENTRADA</button>
+            <button class="btn btn-entry" onclick="processar('ENTRADA')">REGISTRAR ENTRADA</button>
         </div>
     </div>
 
-    <!-- SAÍDA (TODOS) -->
     <div id="page-saida" class="page">
         <div id="reader-exit"></div>
-        <div class="glass-card">
-            <label style="font-weight:700; font-size:12px">BAIXA DE MATERIAL</label>
-            <input type="text" id="sai-code" placeholder="Escaneie para retirar">
+        <div class="card">
+            <input type="text" id="sai-code" placeholder="Código de Saída">
             <input type="number" id="sai-qtd" value="1">
             <button class="btn btn-exit" onclick="processar('SAIDA')">REGISTRAR SAÍDA</button>
         </div>
     </div>
 
-    <!-- DEPÓSITO COM SOMA INTELIGENTE -->
     <div id="page-estoque" class="page">
-        <div class="glass-card">
-            <input type="text" id="filtro-estoque" onkeyup="renderEstoque()" placeholder="Pesquisar material (ex: Arroz)...">
-            <div id="badge-soma" class="total-badge" style="display:none"></div>
+        <div class="card">
+            <input type="text" id="filtro-estoque" onkeyup="renderEstoque()" placeholder="Filtrar e somar materiais...">
+            <div id="soma-total" style="font-weight:800; color:var(--accent); margin-top:10px"></div>
         </div>
-        <div class="glass-card" style="padding:10px">
-            <table id="tabela-estoque">
-                <thead><tr><th>Item</th><th style="text-align:center">Saldo</th><th>Validade</th></tr></thead>
-                <tbody></tbody>
-            </table>
-        </div>
+
+        <span class="sector-title">🥩 Frigorífico</span>
+        <table><thead><tr><th>Item</th><th style="text-align:center">Qtd</th><th>Validade</th></tr></thead><tbody id="lista-frigo"></tbody></table>
+
+        <span class="sector-title">📦 Secos</span>
+        <table><thead><tr><th>Item</th><th style="text-align:center">Qtd</th><th>Validade</th></tr></thead><tbody id="lista-secos"></tbody></table>
     </div>
 
-    <!-- RELATÓRIOS (ADMIN) -->
     <div id="page-relatorio" class="page">
-        <div class="glass-card">
-            <h3>Fechamento Mensal</h3>
-            <select id="rel-mes">
-                <option value="0">Janeiro</option><option value="1">Fevereiro</option><option value="2">Março</option>
-                <option value="3">Abril</option><option value="4">Maio</option><option value="5">Junho</option>
-            </select>
-            <button class="btn btn-primary" onclick="alert('Relatório Gerado com Sucesso!')">GERAR PDF</button>
+        <div class="card">
+            <h3>Relatórios de Movimentação</h3>
+            <div id="logs-view"></div>
         </div>
     </div>
 
 </div>
 
 <script>
-    // CONFIGURAÇÃO DO SEU FIREBASE
+    // Cole aqui suas chaves do Firebase
     const firebaseConfig = {
   apiKey: "AIzaSyA-2SH_h57k24EKQXLjOkWsrs70tbSbFGE",
   authDomain: "depositorancho-43b21.firebaseapp.com",
@@ -150,36 +135,20 @@
     let currentUserLevel = null;
     let html5QrCode;
 
-    // LOGIN DINÂMICO (Busca direto na sua pasta config/usuarios)
     function autenticar() {
         const u = document.getElementById('user-input').value;
         const p = document.getElementById('pass-input').value;
-
-        if(!u || !p) return alert("Preencha os campos!");
-
         database.ref('config/usuarios/' + u).once('value', snap => {
             const userData = snap.val();
             if(userData && userData.pass === p) {
-                currentUserLevel = userData.nivel; // ADMIN ou OPERADOR
-                iniciarApp();
-            } else {
-                alert("Usuário ou senha incorretos no banco de dados.");
-            }
+                currentUserLevel = userData.nivel;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-nav').style.display = 'flex';
+                document.getElementById('app-content').style.display = 'block';
+                if(currentUserLevel === 'OPERADOR') document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+                switchTab(currentUserLevel === 'ADMIN' ? 'entrada' : 'saida');
+            } else { alert("Acesso negado: Verifique usuário e senha."); }
         });
-    }
-
-    function iniciarApp() {
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('main-nav').style.display = 'flex';
-        document.getElementById('app-content').style.display = 'block';
-
-        if(currentUserLevel === 'OPERADOR') {
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-            switchTab('saida');
-        } else {
-            switchTab('entrada');
-        }
-        renderEstoque();
     }
 
     async function switchTab(tab) {
@@ -187,7 +156,6 @@
         document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
         document.getElementById('page-' + tab).classList.add('active');
         document.getElementById('tab-' + tab.substring(0,3)).classList.add('active');
-
         if (html5QrCode) await html5QrCode.stop().catch(()=>{});
         const divId = tab === 'entrada' ? 'reader-entry' : (tab === 'saida' ? 'reader-exit' : null);
         if (divId) {
@@ -195,29 +163,21 @@
             html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (text) => {
                 const prefix = tab === 'entrada' ? 'ent' : 'sai';
                 document.getElementById(prefix + '-code').value = text;
-                if(tab === 'entrada') buscarNomeAutomatico(text);
             });
         }
-    }
-
-    function buscarNomeAutomatico(code) {
-        database.ref('estoque/' + code).once('value', snap => {
-            if(snap.exists()) document.getElementById('ent-nome').value = snap.val().nome;
-        });
+        if(tab === 'estoque') renderEstoque();
     }
 
     function processar(tipo) {
         const prefix = tipo === 'ENTRADA' ? 'ent' : 'sai';
         const code = document.getElementById(prefix + '-code').value;
         const qtd = parseInt(document.getElementById(prefix + '-qtd').value);
-        if(!code || isNaN(qtd)) return alert("Dados incompletos!");
+        if(!code || isNaN(qtd)) return;
 
-        const itemRef = database.ref('estoque/' + code);
-        itemRef.once('value', snap => {
+        database.ref('estoque/' + code).once('value', snap => {
             let d = snap.val() || { nome: code, saldo: 0, setor: 'SECO' };
             let novoSaldo = tipo === 'ENTRADA' ? d.saldo + qtd : d.saldo - qtd;
-            
-            if(novoSaldo < 0) return alert("Erro: Saldo Insuficiente!");
+            if(novoSaldo < 0) return alert("Saldo insuficiente!");
 
             const update = {
                 saldo: novoSaldo,
@@ -225,44 +185,48 @@
                 setor: tipo === 'ENTRADA' ? document.getElementById('ent-setor').value : d.setor,
                 validade: tipo === 'ENTRADA' ? document.getElementById('ent-validade').value : (d.validade || "")
             };
-
-            itemRef.update(update);
+            database.ref('estoque/' + code).update(update);
             database.ref('logs/' + new Date().toISOString().split('T')[0]).push({
-                tipo, code, nome: update.nome, qtd, hora: new Date().toLocaleTimeString()
+                tipo, nome: update.nome, qtd, hora: new Date().toLocaleTimeString()
             });
-            
             document.getElementById(prefix + '-code').value = '';
-            alert(tipo + " realizada com sucesso!");
+            alert("Operação concluída!");
         });
     }
 
     function renderEstoque() {
         const filtro = document.getElementById('filtro-estoque').value.toLowerCase();
         database.ref('estoque').once('value', snap => {
-            const tbody = document.querySelector('#tabela-estoque tbody');
-            const badge = document.getElementById('badge-soma');
-            tbody.innerHTML = '';
-            let somaTotal = 0;
+            const tbFrigo = document.getElementById('lista-frigo');
+            const tbSecos = document.getElementById('lista-secos');
+            tbFrigo.innerHTML = ''; tbSecos.innerHTML = '';
+            let soma = 0;
+            let itens = [];
+            
+            snap.forEach(c => { itens.push(c.val()); });
+            
+            // ORDEM ALFABÉTICA
+            itens.sort((a, b) => a.nome.localeCompare(b.nome));
 
-            snap.forEach(c => {
-                const i = c.val();
+            const hoje = new Date();
+            const limiteVenc = new Date();
+            limiteVenc.setDate(hoje.getDate() + 15);
+
+            itens.forEach(i => {
                 if(i.nome.toLowerCase().includes(filtro)) {
-                    somaTotal += i.saldo;
-                    const style = i.setor === 'FRIGORIFICO' ? 'color:var(--accent)' : '';
-                    tbody.innerHTML += `<tr>
-                        <td><b style="${style}">${i.nome}</b><br><small>${i.setor}</small></td>
-                        <td align="center"><b>${i.saldo}</b></td>
-                        <td>${i.validade || '-'}</td>
-                    </tr>`;
+                    soma += i.saldo;
+                    let alertClass = "";
+                    if(i.validade) {
+                        const dataVenc = new Date(i.validade);
+                        if(dataVenc <= limiteVenc) alertClass = "vencendo";
+                    }
+
+                    const row = `<tr><td><b>${i.nome}</b></td><td align="center">${i.saldo}</td><td class="${alertClass}">${i.validade || '-'}</td></tr>`;
+                    if(i.setor === 'FRIGORIFICO') tbFrigo.innerHTML += row;
+                    else tbSecos.innerHTML += row;
                 }
             });
-
-            if(filtro) {
-                badge.style.display = 'inline-block';
-                badge.innerText = `SOMA TOTAL (${filtro.toUpperCase()}): ${somaTotal}`;
-            } else {
-                badge.style.display = 'none';
-            }
+            document.getElementById('soma-total').innerText = filtro ? `TOTAL FILTRADO: ${soma}` : "";
         });
     }
 
