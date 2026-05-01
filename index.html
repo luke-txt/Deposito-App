@@ -1,129 +1,500 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Depósito Aprov</title>
-    
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2897/2897785.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Depósito Aprov</title>
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2897/2897785.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
-    <style>
-        :root { --primary: #0f172a; --accent: #3b82f6; --entry: #10b981; --exit: #ef4444; --bg: #f8fafc; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding-top: 80px; }
-        
-        #login-screen { position: fixed; inset: 0; background: var(--primary); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .login-box { background: white; padding: 40px; border-radius: 24px; width: 100%; max-width: 400px; text-align: center; }
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161921;
+    --surface2: #1e2230;
+    --border: #2a2f42;
+    --text: #e8eaf0;
+    --text-muted: #6b7280;
+    --accent: #3b82f6;
+    --accent-dim: rgba(59,130,246,0.15);
+    --green: #10b981;
+    --green-dim: rgba(16,185,129,0.15);
+    --red: #ef4444;
+    --red-dim: rgba(239,68,68,0.15);
+    --yellow: #f59e0b;
+    --yellow-dim: rgba(245,158,11,0.15);
+    --nav-h: 64px;
+  }
 
-        .nav-header { position: fixed; top: 0; width: 100%; background: var(--primary); display: flex; z-index: 1000; overflow-x: auto; }
-        .nav-item { flex: 1; text-align: center; padding: 20px 10px; font-size: 10px; font-weight: 800; color: #64748b; cursor: pointer; text-transform: uppercase; white-space: nowrap; }
-        .nav-item.active { color: white; border-bottom: 4px solid var(--accent); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .container { max-width: 700px; margin: auto; padding: 0 20px; }
-        .page { display: none; }
-        .page.active { display: block; animation: fadeIn 0.4s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-top: var(--nav-h);
+  }
 
-        .card { background: white; border-radius: 20px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e2e8f0; }
-        input, select { width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 16px; box-sizing: border-box; }
-        
-        .btn { width: 100%; padding: 18px; border: none; border-radius: 12px; color: white; font-weight: 700; cursor: pointer; font-size: 14px; }
-        .btn-primary { background: var(--accent); }
-        .btn-entry { background: var(--entry); }
-        .btn-exit { background: var(--exit); }
+  /* ── LOGIN ── */
+  #login-screen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 40px 36px;
+    width: 100%; max-width: 380px;
+    text-align: center;
+  }
+  .login-box h2 { font-size: 22px; font-weight: 900; margin-bottom: 6px; }
+  .login-box p { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
+  .login-logo {
+    width: 56px; height: 56px;
+    background: var(--accent-dim);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin: 0 auto 20px;
+  }
+  #login-error { color: var(--red); font-size: 13px; margin-top: 10px; display: none; }
 
-        .sector-title { font-size: 12px; font-weight: 800; color: #64748b; margin: 25px 0 10px 5px; display: block; text-transform: uppercase; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 15px; overflow: hidden; margin-bottom: 20px; }
-        th { text-align: left; font-size: 10px; color: #94a3b8; padding: 12px; border-bottom: 2px solid #f1f5f9; }
-        td { padding: 15px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
-        
-        .vencendo { color: var(--exit); font-weight: 800; animation: blink 1.5s infinite; }
-        @keyframes blink { 50% { opacity: 0.5; } }
+  /* ── NAV ── */
+  .nav-header {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: var(--nav-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: none;
+    align-items: stretch;
+    z-index: 1000;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav-header::-webkit-scrollbar { display: none; }
+  .nav-item {
+    display: flex; align-items: center; gap: 7px;
+    padding: 0 18px;
+    font-size: 12px; font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .nav-item:hover { color: var(--text); }
+  .nav-item.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .nav-icon { font-size: 16px; }
 
-        #reader-entry, #reader-exit { width: 100%; border-radius: 16px; overflow: hidden; margin-bottom: 20px; background: #000; }
-        .log-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; font-size: 13px; }
-    </style>
+  /* ── LAYOUT ── */
+  .container { max-width: 720px; margin: auto; padding: 24px 16px 40px; }
+  .page { display: none; }
+  .page.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 14px;
+  }
+
+  /* ── INPUTS ── */
+  .field { position: relative; margin-bottom: 10px; }
+  .field label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  input[type="text"], input[type="password"], input[type="number"], input[type="date"], select {
+    width: 100%;
+    padding: 13px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    transition: border-color 0.2s;
+    appearance: none;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  input::placeholder { color: var(--text-muted); }
+  select option { background: var(--surface2); }
+
+  /* ── AUTOCOMPLETE ── */
+  .autocomplete-wrap { position: relative; }
+  .autocomplete-list {
+    position: absolute; top: 100%; left: 0; right: 0;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    z-index: 500;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    margin-top: 4px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .autocomplete-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    transition: background 0.15s;
+  }
+  .autocomplete-item:last-child { border-bottom: none; }
+  .autocomplete-item:hover, .autocomplete-item.selected { background: var(--accent-dim); }
+  .autocomplete-item .ac-saldo { font-size: 12px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    width: 100%; padding: 15px; border: none; border-radius: 10px;
+    color: white; font-weight: 700; cursor: pointer; font-size: 14px;
+    font-family: 'DM Sans', sans-serif; letter-spacing: 0.5px;
+    transition: opacity 0.2s, transform 0.1s;
+    text-transform: uppercase;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--accent); }
+  .btn-entry  { background: var(--green); }
+  .btn-exit   { background: var(--red); }
+  .btn-sm {
+    padding: 7px 14px; font-size: 12px; border-radius: 8px; width: auto;
+  }
+
+  /* ── QR READER ── */
+  .qr-wrap { border-radius: 14px; overflow: hidden; background: #000; margin-bottom: 14px; }
+  .qr-toggle {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--accent); cursor: pointer;
+    margin-bottom: 14px; width: fit-content;
+    font-weight: 600;
+  }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 14px 24px; border-radius: 40px;
+    font-size: 14px; font-weight: 600;
+    z-index: 9000; transition: transform 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.success { border-color: var(--green); color: var(--green); }
+  #toast.error   { border-color: var(--red);   color: var(--red);   }
+
+  /* ── ESTOQUE: abas ── */
+  .tabs {
+    display: flex; gap: 4px;
+    background: var(--surface2);
+    padding: 4px; border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .tab-btn {
+    flex: 1; padding: 10px; border: none; border-radius: 9px;
+    background: transparent; color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .tab-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+  /* ── ESTOQUE: tabela ── */
+  .section-label {
+    font-size: 11px; font-weight: 800; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin: 20px 0 8px 4px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    font-size: 10px; color: var(--text-muted); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+  td { padding: 13px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 700;
+    font-family: 'DM Mono', monospace;
+  }
+  .badge-green { background: var(--green-dim); color: var(--green); }
+  .badge-red   { background: var(--red-dim);   color: var(--red);   }
+  .badge-yellow{ background: var(--yellow-dim); color: var(--yellow);}
+  .badge-gray  { background: var(--surface2);   color: var(--text-muted);}
+
+  .vencendo { color: var(--red); font-weight: 800; animation: blink 1.5s infinite; }
+  .vencendo-soon { color: var(--yellow); font-weight: 700; }
+  @keyframes blink { 50% { opacity: 0.4; } }
+
+  /* ── BARCODE view ── */
+  .barcode-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;
+  }
+  .barcode-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .barcode-card .bc-nome { font-size: 13px; font-weight: 700; margin-bottom: 4px; word-break: break-word; }
+  .barcode-card .bc-code { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+  .barcode-svg-wrap { width: 100%; height: 50px; display: flex; align-items: center; justify-content: center; }
+  .barcode-svg-wrap svg { width: 100%; height: 100%; }
+  .barcode-card .bc-saldo { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+
+  /* ── DIÁRIO ── */
+  .log-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .log-item:last-child { border-bottom: none; }
+  .log-hora { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); margin-right: 10px; }
+  .log-nome { font-size: 14px; font-weight: 500; }
+  .log-qty { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 800; }
+
+  /* ── RELATÓRIOS ── */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .stat-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px;
+  }
+  .stat-box .s-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin-bottom: 6px; }
+  .stat-box .s-val { font-size: 26px; font-weight: 900; font-family: 'DM Mono', monospace; }
+  .stat-box .s-val.green { color: var(--green); }
+  .stat-box .s-val.red   { color: var(--red); }
+
+  .period-tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+  .period-tab {
+    padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 700;
+    transition: all 0.2s;
+  }
+  .period-tab.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  .ranking-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .ranking-item:last-child { border-bottom: none; }
+  .rank-num { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); width: 20px; text-align: center; }
+  .rank-bar-wrap { flex: 1; }
+  .rank-nome { font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+  .rank-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .rank-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.6s ease; }
+  .rank-qty { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 700; color: var(--red); }
+
+  /* ── SEARCH & FILTER ── */
+  .search-wrap { position: relative; margin-bottom: 14px; }
+  .search-wrap input { padding-left: 40px; }
+  .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 16px; pointer-events: none; }
+
+  .empty-state {
+    text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;
+  }
+  .empty-state .es-icon { font-size: 40px; margin-bottom: 10px; }
+</style>
 </head>
 <body>
 
+<!-- LOGIN -->
 <div id="login-screen">
-    <div class="login-box">
-        <h2 style="margin-top:0">Depósito Aprov</h2>
-        <input type="text" id="user-input" placeholder="Usuário">
-        <input type="password" id="pass-input" placeholder="Senha">
-        <button class="btn btn-primary" onclick="autenticar()">ACESSAR</button>
+  <div class="login-box">
+    <div class="login-logo">📦</div>
+    <h2>Depósito Aprov</h2>
+    <p>Informe suas credenciais</p>
+    <div class="field">
+      <label>Usuário</label>
+      <input type="text" id="user-input" placeholder="seu.usuario" autocomplete="username">
     </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="pass-input" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary" onclick="autenticar()">ENTRAR</button>
+    <div id="login-error">Usuário ou senha incorretos.</div>
+  </div>
 </div>
 
-<nav class="nav-header" id="main-nav" style="display:none">
-    <div id="tab-ent" class="nav-item admin-only" onclick="switchTab('entrada')">Entrada</div>
-    <div id="tab-sai" class="nav-item" onclick="switchTab('saida')">Saída</div>
-    <div id="tab-est" class="nav-item" onclick="switchTab('estoque')">Estoque</div>
-    <div id="tab-dia" class="nav-item admin-only" onclick="switchTab('diario')">Saída Diária</div>
-    <div id="tab-rel" class="nav-item admin-only" onclick="switchTab('relatorio')">Relatórios</div>
+<!-- NAV -->
+<nav class="nav-header" id="main-nav">
+  <div id="tab-ent" class="nav-item admin-only" onclick="switchTab('entrada')"><span class="nav-icon">📥</span>Entrada</div>
+  <div id="tab-sai" class="nav-item" onclick="switchTab('saida')"><span class="nav-icon">📤</span>Saída</div>
+  <div id="tab-est" class="nav-item" onclick="switchTab('estoque')"><span class="nav-icon">🗂️</span>Estoque</div>
+  <div id="tab-dia" class="nav-item admin-only" onclick="switchTab('diario')"><span class="nav-icon">📋</span>Diário</div>
+  <div id="tab-rel" class="nav-item admin-only" onclick="switchTab('relatorio')"><span class="nav-icon">📊</span>Relatórios</div>
 </nav>
 
 <div class="container" id="app-content" style="display:none">
-    
-    <!-- ENTRADA -->
-    <div id="page-entrada" class="page">
-        <div id="reader-entry"></div>
-        <div class="card">
-            <input type="text" id="ent-code" placeholder="Código">
-            <input type="text" id="ent-nome" placeholder="Material/Marca">
-            <input type="date" id="ent-validade">
-            <select id="ent-setor"><option value="SECO">📦 Secos</option><option value="FRIGORIFICO">🥩 Frigorífico</option></select>
-            <input type="number" id="ent-qtd" value="1">
-            <button class="btn btn-entry" onclick="processar('ENTRADA')">CONFIRMAR</button>
+
+  <!-- ═══════════ ENTRADA ═══════════ -->
+  <div id="page-entrada" class="page">
+    <div id="qr-wrap-entry" class="qr-wrap" style="display:none"><div id="reader-entry"></div></div>
+    <div class="qr-toggle" onclick="toggleQR('entry')">📷 <span id="qr-label-entry">Usar câmera / QR Code</span></div>
+    <div class="card">
+      <div class="card-title">Novo item</div>
+      <div class="field"><label>Código</label><input type="text" id="ent-code" placeholder="Ex: 7891000100103"></div>
+      <div class="field"><label>Nome / Marca</label><input type="text" id="ent-nome" placeholder="Ex: Leite Integral Italac 1L"></div>
+      <div class="field"><label>Validade</label><input type="date" id="ent-validade"></div>
+      <div class="field">
+        <label>Setor</label>
+        <select id="ent-setor">
+          <option value="SECO">📦 Secos</option>
+          <option value="FRIGORIFICO">🥩 Frigorífico</option>
+        </select>
+      </div>
+      <div class="field"><label>Quantidade</label><input type="number" id="ent-qtd" value="1" min="1"></div>
+      <button class="btn btn-entry" onclick="processar('ENTRADA')">✓ CONFIRMAR ENTRADA</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ SAÍDA ═══════════ -->
+  <div id="page-saida" class="page">
+    <div id="qr-wrap-exit" class="qr-wrap" style="display:none"><div id="reader-exit"></div></div>
+    <div class="qr-toggle" onclick="toggleQR('exit')">📷 <span id="qr-label-exit">Usar câmera / QR Code</span></div>
+    <div class="card">
+      <div class="card-title">Registrar saída</div>
+
+      <div class="field">
+        <label>Buscar por nome ou código</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="sai-busca" placeholder="Digite o nome do produto..." oninput="autocomplete()" onkeydown="acKeyNav(event)" autocomplete="off">
+          <div class="autocomplete-list" id="ac-list"></div>
         </div>
+      </div>
+
+      <!-- Preview do produto selecionado -->
+      <div id="sai-preview" style="display:none; margin-bottom:12px;">
+        <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px;">
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">PRODUTO SELECIONADO</div>
+          <div id="sai-preview-nome" style="font-weight:700; font-size:15px;"></div>
+          <div style="display:flex; gap:10px; margin-top:8px;">
+            <span id="sai-preview-saldo" class="badge badge-green"></span>
+            <span id="sai-preview-val" class="badge badge-gray"></span>
+          </div>
+        </div>
+      </div>
+
+      <input type="hidden" id="sai-code">
+      <div class="field"><label>Quantidade</label><input type="number" id="sai-qtd" value="1" min="1"></div>
+      <button class="btn btn-exit" onclick="processar('SAIDA')">✓ CONFIRMAR SAÍDA</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ ESTOQUE ═══════════ -->
+  <div id="page-estoque" class="page">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="filtro-estoque" oninput="renderEstoque()" placeholder="Pesquisar produto...">
     </div>
 
-    <!-- SAÍDA -->
-    <div id="page-saida" class="page">
-        <div id="reader-exit"></div>
-        <div class="card">
-            <input type="text" id="sai-code" placeholder="Código para Retirada">
-            <input type="number" id="sai-qtd" value="1">
-            <button class="btn btn-exit" onclick="processar('SAIDA')">CONFIRMAR SAÍDA</button>
-        </div>
+    <!-- Abas do estoque -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchEstoqueTab('lista')">📋 Itens</button>
+      <button class="tab-btn" onclick="switchEstoqueTab('vencimentos')">⏰ Vencimentos</button>
+      <button class="tab-btn" onclick="switchEstoqueTab('codigos')">🏷️ Códigos</button>
     </div>
 
-    <!-- ESTOQUE -->
-    <div id="page-estoque" class="page">
-        <div class="card">
-            <input type="text" id="filtro-estoque" onkeyup="renderEstoque()" placeholder="Pesquisar...">
-            <div id="soma-total" style="font-weight:800; color:var(--accent); margin-top:10px"></div>
-        </div>
-        <span class="sector-title">🥩 Frigorífico</span>
-        <table><thead><tr><th>Item</th><th>Qtd</th><th>Validade</th></tr></thead><tbody id="lista-frigo"></tbody></table>
-        <span class="sector-title">📦 Secos</span>
-        <table><thead><tr><th>Item</th><th>Qtd</th><th>Validade</th></tr></thead><tbody id="lista-secos"></tbody></table>
+    <!-- ABA: Lista de itens -->
+    <div id="estoque-tab-lista">
+      <div class="section-label">🥩 Frigorífico</div>
+      <div class="card" style="padding:0; overflow:hidden;">
+        <table><thead><tr><th>Item</th><th style="text-align:center">Qtd</th><th>Validade</th></tr></thead>
+        <tbody id="lista-frigo"></tbody></table>
+      </div>
+      <div class="section-label">📦 Secos</div>
+      <div class="card" style="padding:0; overflow:hidden;">
+        <table><thead><tr><th>Item</th><th style="text-align:center">Qtd</th><th>Validade</th></tr></thead>
+        <tbody id="lista-secos"></tbody></table>
+      </div>
     </div>
 
-    <!-- SAÍDA DIÁRIA -->
-    <div id="page-diario" class="page">
-        <div class="card">
-            <label style="font-size:12px; font-weight:800">FILTRAR POR DATA</label>
-            <input type="date" id="busca-data-diario" onchange="renderDiario()">
-            <div id="lista-diaria" style="margin-top:20px"></div>
+    <!-- ABA: Vencimentos -->
+    <div id="estoque-tab-vencimentos" style="display:none">
+      <div id="venc-critico">
+        <div class="section-label" style="color:var(--red)">🚨 Vencidos / Vence em 7 dias</div>
+        <div class="card" style="padding:0; overflow:hidden;">
+          <table><thead><tr><th>Item</th><th>Setor</th><th>Validade</th><th style="text-align:center">Qtd</th></tr></thead>
+          <tbody id="venc-lista-critico"></tbody></table>
         </div>
+      </div>
+      <div id="venc-aviso">
+        <div class="section-label" style="color:var(--yellow)">⚠️ Vence em 8–30 dias</div>
+        <div class="card" style="padding:0; overflow:hidden;">
+          <table><thead><tr><th>Item</th><th>Setor</th><th>Validade</th><th style="text-align:center">Qtd</th></tr></thead>
+          <tbody id="venc-lista-aviso"></tbody></table>
+        </div>
+      </div>
     </div>
 
-    <!-- RELATÓRIOS -->
-    <div id="page-relatorio" class="page">
-        <div class="card"><h3>Relatórios Gerais</h3><p>Consultas de fechamento semanal e mensal.</p></div>
+    <!-- ABA: Códigos de barras -->
+    <div id="estoque-tab-codigos" style="display:none">
+      <div class="barcode-grid" id="barcode-grid"></div>
     </div>
+  </div>
+
+  <!-- ═══════════ SAÍDA DIÁRIA ═══════════ -->
+  <div id="page-diario" class="page">
+    <div class="card">
+      <div class="field">
+        <label>Filtrar por data</label>
+        <input type="date" id="busca-data-diario" onchange="renderDiario()">
+      </div>
+      <div id="diario-stats" style="display:flex; gap:10px; margin-top:10px;"></div>
+    </div>
+    <div id="lista-diaria"></div>
+  </div>
+
+  <!-- ═══════════ RELATÓRIOS ═══════════ -->
+  <div id="page-relatorio" class="page">
+    <div class="stats-grid" id="rel-stats-grid"></div>
+
+    <div class="period-tabs" id="period-tabs">
+      <button class="period-tab active" onclick="switchPeriod('semana',this)">7 dias</button>
+      <button class="period-tab" onclick="switchPeriod('mes',this)">30 dias</button>
+      <button class="period-tab" onclick="switchPeriod('tudo',this)">Tudo</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🏆 Mais retirados no período</div>
+      <div id="ranking-saidas"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📥 Mais recebidos no período</div>
+      <div id="ranking-entradas"></div>
+    </div>
+  </div>
 
 </div>
 
+<!-- TOAST -->
+<div id="toast"></div>
+
 <script>
-    // === COLOQUE SUAS CHAVES AQUI ===
-   const firebaseConfig = {
+// ══════════════════════════════════════════
+// FIREBASE CONFIG
+// ══════════════════════════════════════════
+const firebaseConfig = {
   apiKey: "AIzaSyA-2SH_h57k24EKQXLjOkWsrs70tbSbFGE",
   authDomain: "depositorancho-43b21.firebaseapp.com",
   databaseURL: "https://depositorancho-43b21-default-rtdb.firebaseio.com",
@@ -132,146 +503,549 @@
   messagingSenderId: "883363350930",
   appId: "1:883363350930:web:3da976d452d26837ef994b"
 };
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-    let currentUserLevel = null;
-    let html5QrCode;
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-    function autenticar() {
-        const u = document.getElementById('user-input').value;
-        const p = document.getElementById('pass-input').value;
-        database.ref('config/usuarios/' + u).once('value', snap => {
-            const userData = snap.val();
-            if(userData && userData.pass === p) {
-                currentUserLevel = userData.nivel;
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('main-nav').style.display = 'flex';
-                document.getElementById('app-content').style.display = 'block';
-                if(currentUserLevel === 'OPERADOR') document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-                switchTab(currentUserLevel === 'ADMIN' ? 'entrada' : 'saida');
-            } else { alert("Acesso negado."); }
-        });
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let currentUserLevel = null;
+let estoqueCache = {};       // { code: { nome, saldo, setor, validade } }
+let qrInstances = {};        // { entry: Html5Qrcode, exit: Html5Qrcode }
+let qrAtivo = {};            // { entry: bool, exit: bool }
+let acSelectedIndex = -1;
+let acItems = [];
+let relPeriod = 'semana';
+let estoqueTabAtual = 'lista';
+
+// ══════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════
+function dataLocal(d) {
+  const dt = d || new Date();
+  const ano = dt.getFullYear();
+  const mes = String(dt.getMonth() + 1).padStart(2, '0');
+  const dia = String(dt.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  setTimeout(() => { el.className = ''; }, 2800);
+}
+
+function diasAteVencer(valStr) {
+  if (!valStr) return null;
+  // Parse YYYY-MM-DD sem converter para UTC
+  const [y, m, d] = valStr.split('-').map(Number);
+  const val = new Date(y, m - 1, d);
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  return Math.ceil((val - hoje) / 86400000);
+}
+
+function hashSimples(str) {
+  // Hash leve para não trafegar senha em texto puro para comparação local
+  // Para segurança real, use Firebase Auth.
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  return String(h >>> 0);
+}
+
+// Gera SVG de código de barras tipo "Code 128" visual (representação visual, não escaneável)
+function barcodeVisual(code) {
+  const bars = [];
+  let x = 0;
+  const totalW = 160;
+  const charCount = Math.max(code.length, 8);
+  const barUnit = totalW / (charCount * 11);
+  const seed = code.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  for (let i = 0; i < charCount * 11; i++) {
+    const w = barUnit * (1 + ((seed * (i + 1) * 7) % 3));
+    if (i % 2 === 0) bars.push(`<rect x="${x.toFixed(1)}" y="0" width="${w.toFixed(1)}" height="40" fill="#e8eaf0"/>`);
+    x += w;
+  }
+  return `<svg viewBox="0 0 ${x.toFixed(0)} 40" xmlns="http://www.w3.org/2000/svg" style="background:#0d0f14">${bars.join('')}</svg>`;
+}
+
+// ══════════════════════════════════════════
+// LOGIN (com hash básico de senha)
+// ══════════════════════════════════════════
+document.getElementById('pass-input').addEventListener('keydown', e => { if (e.key === 'Enter') autenticar(); });
+
+function autenticar() {
+  const u = document.getElementById('user-input').value.trim();
+  const p = document.getElementById('pass-input').value;
+  if (!u || !p) return;
+  db.ref('config/usuarios/' + u).once('value', snap => {
+    const ud = snap.val();
+    // Suporta senha em texto puro (legado) OU hash
+    const ok = ud && (ud.pass === p || ud.pass === hashSimples(p));
+    if (ok) {
+      currentUserLevel = ud.nivel;
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('main-nav').style.display = 'flex';
+      document.getElementById('app-content').style.display = 'block';
+      document.getElementById('login-error').style.display = 'none';
+      if (currentUserLevel === 'OPERADOR') {
+        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+      }
+      // Carrega estoque no cache
+      carregarEstoqueCache();
+      switchTab(currentUserLevel === 'ADMIN' ? 'entrada' : 'saida');
+    } else {
+      document.getElementById('login-error').style.display = 'block';
     }
+  });
+}
 
-    async function switchTab(tab) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
-        document.getElementById('page-' + tab).classList.add('active');
-        document.getElementById('tab-' + tab.substring(0,3)).classList.add('active');
-        if (html5QrCode) await html5QrCode.stop().catch(()=>{});
-        const divId = tab === 'entrada' ? 'reader-entry' : (tab === 'saida' ? 'reader-exit' : null);
-        if (divId) {
-            html5QrCode = new Html5Qrcode(divId);
-            html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (text) => {
-                const prefix = tab === 'entrada' ? 'ent' : 'sai';
-                document.getElementById(prefix + '-code').value = text;
-            });
+// ══════════════════════════════════════════
+// CACHE DO ESTOQUE (mantém atualizado)
+// ══════════════════════════════════════════
+function carregarEstoqueCache() {
+  db.ref('estoque').on('value', snap => {
+    estoqueCache = {};
+    snap.forEach(c => {
+      const item = c.val();
+      estoqueCache[c.key] = {
+        nome: item.nome || c.key,
+        saldo: item.saldo || 0,
+        setor: item.setor || 'SECO',
+        validade: item.validade || ''
+      };
+    });
+    // Atualiza telas abertas
+    if (document.getElementById('page-estoque').classList.contains('active')) renderEstoque();
+    if (document.getElementById('page-relatorio').classList.contains('active')) renderRelatorio();
+  });
+}
+
+// ══════════════════════════════════════════
+// NAVEGAÇÃO ENTRE ABAS
+// ══════════════════════════════════════════
+const TAB_MAP = { entrada:'ent', saida:'sai', estoque:'est', diario:'dia', relatorio:'rel' };
+
+async function switchTab(tab) {
+  // Para câmeras ativas
+  for (const key of Object.keys(qrInstances)) {
+    if (qrAtivo[key]) {
+      await qrInstances[key].stop().catch(() => {});
+      qrAtivo[key] = false;
+      document.getElementById(`qr-wrap-${key}`).style.display = 'none';
+      document.getElementById(`qr-label-${key}`).textContent = 'Usar câmera / QR Code';
+    }
+  }
+
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  const tabId = TAB_MAP[tab];
+  if (tabId) { const el = document.getElementById('tab-' + tabId); if (el) el.classList.add('active'); }
+
+  if (tab === 'estoque') renderEstoque();
+  if (tab === 'diario') {
+    document.getElementById('busca-data-diario').value = dataLocal();
+    renderDiario();
+  }
+  if (tab === 'relatorio') renderRelatorio();
+}
+
+// ══════════════════════════════════════════
+// QR CODE
+// ══════════════════════════════════════════
+async function toggleQR(key) {
+  const divId = key === 'entry' ? 'reader-entry' : 'reader-exit';
+  const wrap = document.getElementById(`qr-wrap-${key}`);
+  const labelEl = document.getElementById(`qr-label-${key}`);
+
+  if (qrAtivo[key]) {
+    await qrInstances[key].stop().catch(() => {});
+    qrAtivo[key] = false;
+    wrap.style.display = 'none';
+    labelEl.textContent = 'Usar câmera / QR Code';
+    return;
+  }
+
+  wrap.style.display = 'block';
+  labelEl.textContent = 'Fechar câmera';
+
+  if (!qrInstances[key]) qrInstances[key] = new Html5Qrcode(divId);
+
+  qrInstances[key].start(
+    { facingMode: 'environment' },
+    { fps: 15, qrbox: { width: 250, height: 180 } },
+    (text) => {
+      if (key === 'entry') {
+        document.getElementById('ent-code').value = text;
+        // Se houver no cache, preenche nome
+        if (estoqueCache[text]) {
+          document.getElementById('ent-nome').value = estoqueCache[text].nome;
+          document.getElementById('ent-setor').value = estoqueCache[text].setor;
         }
-        if(tab === 'estoque') renderEstoque();
-        if(tab === 'diario') {
-            document.getElementById('busca-data-diario').valueAsDate = new Date();
-            renderDiario();
-        }
+      } else {
+        // Na saída: preenche via busca
+        document.getElementById('sai-busca').value = text;
+        selecionarItem(text);
+      }
+      qrInstances[key].stop().catch(() => {});
+      qrAtivo[key] = false;
+      wrap.style.display = 'none';
+      labelEl.textContent = 'Usar câmera / QR Code';
+    },
+    () => {}
+  ).then(() => { qrAtivo[key] = true; }).catch(err => {
+    toast('Câmera não disponível: ' + err, 'error');
+    wrap.style.display = 'none';
+  });
+}
+
+// ══════════════════════════════════════════
+// AUTOCOMPLETE NA SAÍDA
+// ══════════════════════════════════════════
+function autocomplete() {
+  const val = document.getElementById('sai-busca').value.toLowerCase().trim();
+  const list = document.getElementById('ac-list');
+  acSelectedIndex = -1;
+
+  if (!val || val.length < 2) { list.style.display = 'none'; return; }
+
+  acItems = Object.entries(estoqueCache)
+    .filter(([code, item]) =>
+      item.nome.toLowerCase().includes(val) || code.toLowerCase().includes(val)
+    )
+    .sort((a, b) => a[1].nome.localeCompare(b[1].nome))
+    .slice(0, 8);
+
+  if (!acItems.length) { list.style.display = 'none'; return; }
+
+  list.innerHTML = acItems.map(([code, item], i) => `
+    <div class="autocomplete-item" onclick="selecionarItem('${code}')" data-idx="${i}">
+      <span>${item.nome} <span style="font-size:11px;color:var(--text-muted)">${code}</span></span>
+      <span class="ac-saldo">${item.saldo} un.</span>
+    </div>
+  `).join('');
+  list.style.display = 'block';
+}
+
+function acKeyNav(e) {
+  const list = document.getElementById('ac-list');
+  const items = list.querySelectorAll('.autocomplete-item');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') { acSelectedIndex = Math.min(acSelectedIndex + 1, items.length - 1); }
+  else if (e.key === 'ArrowUp') { acSelectedIndex = Math.max(acSelectedIndex - 1, 0); }
+  else if (e.key === 'Enter' && acSelectedIndex >= 0) {
+    e.preventDefault();
+    const [code] = acItems[acSelectedIndex];
+    selecionarItem(code);
+    return;
+  } else return;
+  items.forEach((el, i) => el.classList.toggle('selected', i === acSelectedIndex));
+  items[acSelectedIndex]?.scrollIntoView({ block: 'nearest' });
+}
+
+function selecionarItem(code) {
+  const item = estoqueCache[code];
+  if (!item) return;
+  document.getElementById('sai-code').value = code;
+  document.getElementById('sai-busca').value = item.nome;
+  document.getElementById('ac-list').style.display = 'none';
+
+  // Preview
+  document.getElementById('sai-preview').style.display = 'block';
+  document.getElementById('sai-preview-nome').textContent = item.nome;
+  document.getElementById('sai-preview-saldo').textContent = `${item.saldo} em estoque`;
+  const dias = diasAteVencer(item.validade);
+  const valTxt = item.validade ? `Val: ${item.validade}` : 'Sem validade';
+  const valEl = document.getElementById('sai-preview-val');
+  valEl.textContent = valTxt;
+  valEl.className = 'badge ' + (dias !== null && dias <= 7 ? 'badge-red' : dias !== null && dias <= 30 ? 'badge-yellow' : 'badge-gray');
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.autocomplete-wrap')) document.getElementById('ac-list').style.display = 'none';
+});
+
+// ══════════════════════════════════════════
+// PROCESSAR ENTRADA / SAÍDA
+// ══════════════════════════════════════════
+function processar(tipo) {
+  const prefix = tipo === 'ENTRADA' ? 'ent' : 'sai';
+  const code = tipo === 'ENTRADA'
+    ? document.getElementById('ent-code').value.trim()
+    : document.getElementById('sai-code').value.trim();
+  const qtd = parseInt(document.getElementById(prefix + '-qtd').value);
+
+  if (!code) { toast('Informe o código do produto.', 'error'); return; }
+  if (!qtd || qtd < 1) { toast('Quantidade inválida.', 'error'); return; }
+
+  db.ref('estoque/' + code).once('value', snap => {
+    let d = snap.val() || { nome: code, saldo: 0, setor: 'SECO', validade: '' };
+
+    const novoSaldo = tipo === 'ENTRADA' ? d.saldo + qtd : d.saldo - qtd;
+    if (novoSaldo < 0) { toast('Saldo insuficiente! Disponível: ' + d.saldo, 'error'); return; }
+
+    const update = {
+      saldo: novoSaldo,
+      nome: tipo === 'ENTRADA' ? (document.getElementById('ent-nome').value.trim() || d.nome) : d.nome,
+      setor: tipo === 'ENTRADA' ? document.getElementById('ent-setor').value : d.setor,
+      validade: tipo === 'ENTRADA' ? document.getElementById('ent-validade').value : (d.validade || '')
+    };
+
+    db.ref('estoque/' + code).update(update);
+
+    const dataHoje = dataLocal();
+    db.ref('logs/' + dataHoje).push({
+      tipo,
+      nome: update.nome,
+      code,
+      qtd,
+      hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    });
+
+    // Limpa campos
+    if (tipo === 'ENTRADA') {
+      document.getElementById('ent-code').value = '';
+      document.getElementById('ent-nome').value = '';
+      document.getElementById('ent-validade').value = '';
+      document.getElementById('ent-qtd').value = 1;
+    } else {
+      document.getElementById('sai-code').value = '';
+      document.getElementById('sai-busca').value = '';
+      document.getElementById('sai-qtd').value = 1;
+      document.getElementById('sai-preview').style.display = 'none';
     }
 
-    function processar(tipo) {
-        const prefix = tipo === 'ENTRADA' ? 'ent' : 'sai';
-        const code = document.getElementById(prefix + '-code').value;
-        const qtd = parseInt(document.getElementById(prefix + '-qtd').value);
-        if(!code || isNaN(qtd)) return;
+    toast(tipo === 'ENTRADA' ? '✅ Entrada registrada!' : '✅ Saída registrada!');
+  });
+}
 
-        database.ref('estoque/' + code).once('value', snap => {
-            let d = snap.val() || { nome: code, saldo: 0, setor: 'SECO' };
-            let novoSaldo = tipo === 'ENTRADA' ? d.saldo + qtd : d.saldo - qtd;
-            if(novoSaldo < 0) return alert("Sem saldo!");
+// ══════════════════════════════════════════
+// ESTOQUE — TABS
+// ══════════════════════════════════════════
+function switchEstoqueTab(tab) {
+  estoqueTabAtual = tab;
+  ['lista', 'vencimentos', 'codigos'].forEach(t => {
+    document.getElementById('estoque-tab-' + t).style.display = t === tab ? '' : 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', ['lista','vencimentos','codigos'][i] === tab);
+  });
+  renderEstoque();
+}
 
-            const update = {
-                saldo: novoSaldo,
-                nome: tipo === 'ENTRADA' ? document.getElementById('ent-nome').value : d.nome,
-                setor: tipo === 'ENTRADA' ? document.getElementById('ent-setor').value : d.setor,
-                validade: tipo === 'ENTRADA' ? document.getElementById('ent-validade').value : (d.validade || "")
-            };
-            database.ref('estoque/' + code).update(update);
-            
-            const dataHoje = new Date().toISOString().split('T')[0];
-            database.ref('logs/' + dataHoje).push({
-                tipo, nome: update.nome, qtd, hora: new Date().toLocaleTimeString()
-            });
-            document.getElementById(prefix + '-code').value = '';
-            alert("Sucesso!");
-        });
+function renderEstoque() {
+  if (!document.getElementById('page-estoque').classList.contains('active')) return;
+  const filtro = (document.getElementById('filtro-estoque')?.value || '').toLowerCase();
+
+  const itens = Object.entries(estoqueCache)
+    .filter(([code, item]) => !filtro || item.nome.toLowerCase().includes(filtro) || code.includes(filtro))
+    .sort((a, b) => a[1].nome.localeCompare(b[1].nome));
+
+  if (estoqueTabAtual === 'lista') renderEstoqueLista(itens);
+  else if (estoqueTabAtual === 'vencimentos') renderEstoqueVencimentos(itens);
+  else if (estoqueTabAtual === 'codigos') renderEstoqueCodigos(itens);
+}
+
+function renderEstoqueLista(itens) {
+  const frigo = document.getElementById('lista-frigo');
+  const secos = document.getElementById('lista-secos');
+  frigo.innerHTML = ''; secos.innerHTML = '';
+
+  itens.forEach(([code, item]) => {
+    const dias = diasAteVencer(item.validade);
+    let valClasse = '', valTxt = item.validade || '—';
+    if (dias !== null && dias <= 0) valClasse = 'vencendo';
+    else if (dias !== null && dias <= 7) valClasse = 'vencendo';
+    else if (dias !== null && dias <= 30) valClasse = 'vencendo-soon';
+
+    const row = `<tr>
+      <td><b>${item.nome}</b><div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace">${code}</div></td>
+      <td style="text-align:center"><span class="badge ${item.saldo > 0 ? 'badge-green' : 'badge-red'}">${item.saldo}</span></td>
+      <td class="${valClasse}">${valTxt}</td>
+    </tr>`;
+    (item.setor === 'FRIGORIFICO' ? frigo : secos).innerHTML += row;
+  });
+
+  if (!frigo.innerHTML) frigo.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px">Vazio</td></tr>';
+  if (!secos.innerHTML) secos.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px">Vazio</td></tr>';
+}
+
+function renderEstoqueVencimentos(itens) {
+  const critico = document.getElementById('venc-lista-critico');
+  const aviso = document.getElementById('venc-lista-aviso');
+  critico.innerHTML = ''; aviso.innerHTML = '';
+
+  const setor = (s) => s === 'FRIGORIFICO' ? '🥩 Frigorífico' : '📦 Secos';
+
+  itens.forEach(([code, item]) => {
+    if (!item.validade) return;
+    const dias = diasAteVencer(item.validade);
+    if (dias === null) return;
+    const row = `<tr>
+      <td><b>${item.nome}</b></td>
+      <td style="font-size:12px">${setor(item.setor)}</td>
+      <td class="${dias <= 7 ? 'vencendo' : 'vencendo-soon'}">${item.validade} <span style="font-size:11px">(${dias <= 0 ? 'VENCIDO' : dias + 'd'})</span></td>
+      <td style="text-align:center">${item.saldo}</td>
+    </tr>`;
+    if (dias <= 7) critico.innerHTML += row;
+    else if (dias <= 30) aviso.innerHTML += row;
+  });
+
+  if (!critico.innerHTML) critico.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">✅ Nenhum item crítico</td></tr>';
+  if (!aviso.innerHTML) aviso.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">✅ Nenhum aviso</td></tr>';
+}
+
+function renderEstoqueCodigos(itens) {
+  const grid = document.getElementById('barcode-grid');
+  if (!itens.length) { grid.innerHTML = '<div class="empty-state"><div class="es-icon">🏷️</div>Nenhum produto encontrado</div>'; return; }
+  grid.innerHTML = itens.map(([code, item]) => `
+    <div class="barcode-card">
+      <div class="bc-nome">${item.nome}</div>
+      <div class="bc-code">${code}</div>
+      <div class="barcode-svg-wrap">${barcodeVisual(code)}</div>
+      <div class="bc-saldo">Saldo: <b>${item.saldo}</b> | ${item.setor === 'FRIGORIFICO' ? '🥩' : '📦'}</div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════
+// DIÁRIO
+// ══════════════════════════════════════════
+function renderDiario() {
+  const dataBusca = document.getElementById('busca-data-diario').value;
+  const container = document.getElementById('lista-diaria');
+  const statsEl = document.getElementById('diario-stats');
+  container.innerHTML = '<div class="empty-state"><div class="es-icon">⏳</div>Carregando...</div>';
+
+  db.ref('logs/' + dataBusca).once('value', snap => {
+    container.innerHTML = '';
+    statsEl.innerHTML = '';
+    if (!snap.exists()) {
+      container.innerHTML = '<div class="empty-state"><div class="es-icon">📭</div>Nenhuma movimentação nesta data.</div>';
+      return;
     }
 
-    function renderEstoque() {
-        const filtroInput = document.getElementById('filtro-estoque');
-        const filtro = filtroInput ? filtroInput.value.toLowerCase() : '';
-        
-        database.ref('estoque').once('value', snap => {
-            const tbFrigo = document.getElementById('lista-frigo');
-            const tbSecos = document.getElementById('lista-secos');
-            if(!tbFrigo || !tbSecos) return;
-            
-            tbFrigo.innerHTML = ''; tbSecos.innerHTML = '';
-            let soma = 0; 
-            let itens = [];
-            
-            // TRATAMENTO ANTI-ERROS: Previne falha com itens sem nome
-            snap.forEach(c => { 
-                let item = c.val();
-                if(!item.nome) item.nome = c.key; // Se não tiver nome, usa o código
-                if(!item.setor) item.setor = 'SECO';
-                if(!item.saldo) item.saldo = 0;
-                itens.push(item); 
-            });
+    let totalEnt = 0, totalSai = 0;
+    const logs = [];
+    snap.forEach(l => logs.push(l.val()));
+    logs.reverse();
 
-        
-            // ORDEM ALFABÉTICA SEGURA
-            itens.sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
+    logs.forEach(log => {
+      const ent = log.tipo === 'ENTRADA';
+      totalEnt += ent ? log.qtd : 0;
+      totalSai += !ent ? log.qtd : 0;
+      container.innerHTML += `
+        <div class="card" style="padding:0">
+          <div class="log-item" style="padding:14px 16px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:20px">${ent ? '📥' : '📤'}</span>
+              <div>
+                <div class="log-nome">${log.nome}</div>
+                <span class="log-hora">${log.hora}</span>
+              </div>
+            </div>
+            <span class="log-qty" style="color:${ent ? 'var(--green)' : 'var(--red)'}">
+              ${ent ? '+' : '-'}${log.qtd}
+            </span>
+          </div>
+        </div>`;
+    });
 
-            const hoje = new Date();
-            const limiteVenc = new Date(); limiteVenc.setDate(hoje.getDate() + 15);
+    statsEl.innerHTML = `
+      <div style="flex:1;background:var(--green-dim);border:1px solid var(--green);border-radius:10px;padding:10px 14px">
+        <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase">Entradas</div>
+        <div style="font-size:22px;font-weight:900;color:var(--green);font-family:'DM Mono',monospace">+${totalEnt}</div>
+      </div>
+      <div style="flex:1;background:var(--red-dim);border:1px solid var(--red);border-radius:10px;padding:10px 14px">
+        <div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase">Saídas</div>
+        <div style="font-size:22px;font-weight:900;color:var(--red);font-family:'DM Mono',monospace">-${totalSai}</div>
+      </div>`;
+  });
+}
 
-            itens.forEach(i => {
-                const nomeSeguro = String(i.nome).toLowerCase();
-                if(nomeSeguro.includes(filtro)) {
-                    soma += i.saldo;
-                    let classe = i.validade && new Date(i.validade) <= limiteVenc ? "vencendo" : "";
-                    const row = `<tr><td><b>${i.nome}</b></td><td align="center">${i.saldo}</td><td class="${classe}">${i.validade || '-'}</td></tr>`;
-                    if(i.setor === 'FRIGORIFICO') tbFrigo.innerHTML += row;
-                    else tbSecos.innerHTML += row;
-                }
-            });
-            
-            const badgeSoma = document.getElementById('soma-total');
-            if(badgeSoma) badgeSoma.innerText = filtro ? `SOMA: ${soma}` : "";
-        });
-    }
+// ══════════════════════════════════════════
+// RELATÓRIOS
+// ══════════════════════════════════════════
+function switchPeriod(p, btn) {
+  relPeriod = p;
+  document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRelatorio();
+}
 
-    function renderDiario() {
-        const dataBusca = document.getElementById('busca-data-diario').value;
-        const container = document.getElementById('lista-diaria');
-        if(!container) return;
-        
-        container.innerHTML = 'Carregando...';
+async function renderRelatorio() {
+  // Stats do estoque atual
+  const itens = Object.values(estoqueCache);
+  const totalItens = itens.length;
+  const totalUnits = itens.reduce((s, i) => s + i.saldo, 0);
+  const vencendo7 = itens.filter(i => { const d = diasAteVencer(i.validade); return d !== null && d <= 7; }).length;
 
-        database.ref('logs/' + dataBusca).once('value', snap => {
-            container.innerHTML = '';
-            if(!snap.exists()) { container.innerHTML = '<p style="color:#94a3b8; font-size:14px;">Nenhuma movimentação registrada nesta data.</p>'; return; }
-            
-            snap.forEach(l => {
-                const log = l.val();
-                const cor = log.tipo === 'ENTRADA' ? '#10b981' : '#ef4444';
-                container.innerHTML += `
-                    <div class="log-item">
-                        <span><b>${log.hora.substring(0,5)}</b> - ${log.nome}</span>
-                        <span style="color:${cor}; font-weight:800">${log.tipo === 'ENTRADA' ? '+' : '-'}${log.qtd}</span>
-                    </div>`;
-            });
-        });
-    }
+  document.getElementById('rel-stats-grid').innerHTML = `
+    <div class="stat-box">
+      <div class="s-label">Produtos</div>
+      <div class="s-val">${totalItens}</div>
+    </div>
+    <div class="stat-box">
+      <div class="s-label">Unidades</div>
+      <div class="s-val">${totalUnits}</div>
+    </div>
+    <div class="stat-box">
+      <div class="s-label">Vencendo</div>
+      <div class="s-val ${vencendo7 > 0 ? 'red' : ''}">${vencendo7}</div>
+    </div>
+    <div class="stat-box">
+      <div class="s-label">Frigorífico</div>
+      <div class="s-val">${itens.filter(i => i.setor === 'FRIGORIFICO').length}</div>
+    </div>`;
 
-    // Monitora o banco e atualiza a tela automaticamente
-    database.ref('estoque').on('value', renderEstoque);
+  // Logs do período
+  const hoje = new Date();
+  const dias = relPeriod === 'semana' ? 7 : relPeriod === 'mes' ? 30 : 365;
+
+  const movSaidas = {};
+  const movEntradas = {};
+
+  const promises = [];
+  for (let i = 0; i < dias; i++) {
+    const d = new Date(hoje);
+    d.setDate(hoje.getDate() - i);
+    const key = dataLocal(d);
+    promises.push(db.ref('logs/' + key).once('value'));
+  }
+
+  const snaps = await Promise.all(promises);
+  snaps.forEach(snap => {
+    snap.forEach(l => {
+      const log = l.val();
+      if (log.tipo === 'SAIDA') {
+        movSaidas[log.nome] = (movSaidas[log.nome] || 0) + log.qtd;
+      } else {
+        movEntradas[log.nome] = (movEntradas[log.nome] || 0) + log.qtd;
+      }
+    });
+  });
+
+  renderRanking('ranking-saidas', movSaidas, 'var(--red)');
+  renderRanking('ranking-entradas', movEntradas, 'var(--green)');
+}
+
+function renderRanking(elId, data, cor) {
+  const el = document.getElementById(elId);
+  const sorted = Object.entries(data).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  if (!sorted.length) { el.innerHTML = '<div class="empty-state" style="padding:20px">Sem dados no período.</div>'; return; }
+  const max = sorted[0][1];
+  el.innerHTML = sorted.map(([nome, qty], i) => `
+    <div class="ranking-item">
+      <div class="rank-num">${i + 1}</div>
+      <div class="rank-bar-wrap">
+        <div class="rank-nome">${nome}</div>
+        <div class="rank-bar"><div class="rank-bar-fill" style="width:${(qty/max*100).toFixed(0)}%; background:${cor}"></div></div>
+      </div>
+      <div class="rank-qty" style="color:${cor}">${qty}</div>
+    </div>`).join('');
+}
 </script>
 </body>
 </html>
