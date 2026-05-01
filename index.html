@@ -235,6 +235,7 @@ tr:hover td{background:var(--surface2)}
       </div>
       <input type="hidden" id="sai-code">
       <div class="field"><label>Quantidade</label><input type="number" id="sai-qtd" value="1" min="1"></div>
+      <div class="field"><label>Data da Saída (Opcional - Deixe vazio para usar a data de hoje)</label><input type="date" id="sai-data"></div>
       <button class="btn btn-red" id="btn-saida">✓ CONFIRMAR SAÍDA</button>
     </div>
   </div>
@@ -708,10 +709,13 @@ function processar(tipo) {
     if (val) { if(cacheReady) buildAcList(val); else onSaiBuscaInput(); }
     return;
   }
-  gravarMovimento('SAIDA', code, null, qtd);
+  
+  // Pegar data opcional customizada da saída
+  const dataManual = document.getElementById('sai-data').value;
+  gravarMovimento('SAIDA', code, null, qtd, dataManual);
 }
 
-function gravarMovimento(tipo, code, dadosEntrada, qtd) {
+function gravarMovimento(tipo, code, dadosEntrada, qtd, dataManual = null) {
   db.ref('estoque/' + code).once('value').then(snap => {
     const atual = snap.val();
 
@@ -731,10 +735,13 @@ function gravarMovimento(tipo, code, dadosEntrada, qtd) {
       validade:tipo === 'ENTRADA' ? dadosEntrada.validade: base.validade,
       unidade: tipo === 'ENTRADA' ? dadosEntrada.unidade : (base.unidade || 'un')
     };
+    
+    // Usa dataManual se existir, caso contrário dataLocal()
+    const dataLog = dataManual ? dataManual : dataLocal();
 
     const updates = {};
     updates['estoque/' + code] = novosDados;
-    updates['logs/' + dataLocal() + '/' + Date.now()] = {
+    updates['logs/' + dataLog + '/' + Date.now()] = {
       tipo, code, nome: novosDados.nome, qtd,
       hora: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
     };
@@ -749,6 +756,7 @@ function gravarMovimento(tipo, code, dadosEntrada, qtd) {
         document.getElementById('sai-code').value = '';
         document.getElementById('sai-busca').value = '';
         document.getElementById('sai-qtd').value = 1;
+        document.getElementById('sai-data').value = ''; // Limpa a data de saída customizada
         document.getElementById('sai-preview-box').style.display = 'none';
       }
     }).catch(err => { console.error(err); toast('Erro ao gravar: ' + err.code, 'err'); });
