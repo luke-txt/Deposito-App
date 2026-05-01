@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Depósito Aprov</title>
     
-    <!-- Ícone e Configurações de App -->
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2897/2897785.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Depósito Aprov">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -19,16 +17,13 @@
         :root { --primary: #0f172a; --accent: #3b82f6; --entry: #10b981; --exit: #ef4444; --bg: #f8fafc; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding-top: 80px; }
         
-        /* Login */
         #login-screen { position: fixed; inset: 0; background: var(--primary); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
         .login-box { background: white; padding: 40px; border-radius: 24px; width: 100%; max-width: 400px; text-align: center; }
 
-        /* Navegação */
-        .nav-header { position: fixed; top: 0; width: 100%; background: var(--primary); display: flex; z-index: 1000; }
-        .nav-item { flex: 1; text-align: center; padding: 20px 10px; font-size: 10px; font-weight: 800; color: #64748b; cursor: pointer; text-transform: uppercase; }
+        .nav-header { position: fixed; top: 0; width: 100%; background: var(--primary); display: flex; z-index: 1000; overflow-x: auto; }
+        .nav-item { flex: 1; text-align: center; padding: 20px 10px; font-size: 10px; font-weight: 800; color: #64748b; cursor: pointer; text-transform: uppercase; white-space: nowrap; }
         .nav-item.active { color: white; border-bottom: 4px solid var(--accent); }
 
-        /* Container e Cards */
         .container { max-width: 700px; margin: auto; padding: 0 20px; }
         .page { display: none; }
         .page.active { display: block; animation: fadeIn 0.4s ease; }
@@ -37,22 +32,21 @@
         .card { background: white; border-radius: 20px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e2e8f0; }
         input, select { width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 16px; box-sizing: border-box; }
         
-        .btn { width: 100%; padding: 18px; border: none; border-radius: 12px; color: white; font-weight: 700; cursor: pointer; }
+        .btn { width: 100%; padding: 18px; border: none; border-radius: 12px; color: white; font-weight: 700; cursor: pointer; font-size: 14px; }
         .btn-primary { background: var(--accent); }
         .btn-entry { background: var(--entry); }
         .btn-exit { background: var(--exit); }
 
-        /* Tabelas por Setor */
         .sector-title { font-size: 12px; font-weight: 800; color: #64748b; margin: 25px 0 10px 5px; display: block; text-transform: uppercase; }
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 15px; overflow: hidden; margin-bottom: 20px; }
         th { text-align: left; font-size: 10px; color: #94a3b8; padding: 12px; border-bottom: 2px solid #f1f5f9; }
         td { padding: 15px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
         
-        /* Alerta de Validade */
         .vencendo { color: var(--exit); font-weight: 800; animation: blink 1.5s infinite; }
         @keyframes blink { 50% { opacity: 0.5; } }
 
         #reader-entry, #reader-exit { width: 100%; border-radius: 16px; overflow: hidden; margin-bottom: 20px; background: #000; }
+        .log-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -62,14 +56,15 @@
         <h2 style="margin-top:0">Depósito Aprov</h2>
         <input type="text" id="user-input" placeholder="Usuário">
         <input type="password" id="pass-input" placeholder="Senha">
-        <button class="btn btn-primary" onclick="autenticar()">ENTRAR NO SISTEMA</button>
+        <button class="btn btn-primary" onclick="autenticar()">ACESSAR</button>
     </div>
 </div>
 
 <nav class="nav-header" id="main-nav" style="display:none">
     <div id="tab-ent" class="nav-item admin-only" onclick="switchTab('entrada')">Entrada</div>
     <div id="tab-sai" class="nav-item" onclick="switchTab('saida')">Saída</div>
-    <div id="tab-est" class="nav-item" onclick="switchTab('estoque')">Depósito</div>
+    <div id="tab-est" class="nav-item" onclick="switchTab('estoque')">Estoque</div>
+    <div id="tab-dia" class="nav-item admin-only" onclick="switchTab('diario')">Saída Diária</div>
     <div id="tab-rel" class="nav-item admin-only" onclick="switchTab('relatorio')">Relatórios</div>
 </nav>
 
@@ -78,49 +73,52 @@
     <div id="page-entrada" class="page">
         <div id="reader-entry"></div>
         <div class="card">
-            <input type="text" id="ent-code" placeholder="Código de Barras">
-            <input type="text" id="ent-nome" placeholder="Material e Marca">
+            <input type="text" id="ent-code" placeholder="Código">
+            <input type="text" id="ent-nome" placeholder="Material/Marca">
             <input type="date" id="ent-validade">
             <select id="ent-setor"><option value="SECO">📦 Secos</option><option value="FRIGORIFICO">🥩 Frigorífico</option></select>
             <input type="number" id="ent-qtd" value="1">
-            <button class="btn btn-entry" onclick="processar('ENTRADA')">REGISTRAR ENTRADA</button>
+            <button class="btn btn-entry" onclick="processar('ENTRADA')">CONFIRMAR</button>
         </div>
     </div>
 
     <div id="page-saida" class="page">
         <div id="reader-exit"></div>
         <div class="card">
-            <input type="text" id="sai-code" placeholder="Código de Saída">
+            <input type="text" id="sai-code" placeholder="Código para Retirada">
             <input type="number" id="sai-qtd" value="1">
-            <button class="btn btn-exit" onclick="processar('SAIDA')">REGISTRAR SAÍDA</button>
+            <button class="btn btn-exit" onclick="processar('SAIDA')">CONFIRMAR SAÍDA</button>
         </div>
     </div>
 
     <div id="page-estoque" class="page">
         <div class="card">
-            <input type="text" id="filtro-estoque" onkeyup="renderEstoque()" placeholder="Filtrar e somar materiais...">
+            <input type="text" id="filtro-estoque" onkeyup="renderEstoque()" placeholder="Pesquisar...">
             <div id="soma-total" style="font-weight:800; color:var(--accent); margin-top:10px"></div>
         </div>
-
         <span class="sector-title">🥩 Frigorífico</span>
-        <table><thead><tr><th>Item</th><th style="text-align:center">Qtd</th><th>Validade</th></tr></thead><tbody id="lista-frigo"></tbody></table>
-
+        <table><thead><tr><th>Item</th><th>Qtd</th><th>Validade</th></tr></thead><tbody id="lista-frigo"></tbody></table>
         <span class="sector-title">📦 Secos</span>
-        <table><thead><tr><th>Item</th><th style="text-align:center">Qtd</th><th>Validade</th></tr></thead><tbody id="lista-secos"></tbody></table>
+        <table><thead><tr><th>Item</th><th>Qtd</th><th>Validade</th></tr></thead><tbody id="lista-secos"></tbody></table>
+    </div>
+
+    <!-- NOVA ABA: SAÍDA DIÁRIA (ADMIN) -->
+    <div id="page-diario" class="page">
+        <div class="card">
+            <label style="font-size:12px; font-weight:800">FILTRAR POR DATA</label>
+            <input type="date" id="busca-data-diario" onchange="renderDiario()">
+            <div id="lista-diaria" style="margin-top:20px"></div>
+        </div>
     </div>
 
     <div id="page-relatorio" class="page">
-        <div class="card">
-            <h3>Relatórios de Movimentação</h3>
-            <div id="logs-view"></div>
-        </div>
+        <div class="card"><h3>Relatórios Gerais</h3><p>Consultas de fechamento semanal e mensal.</p></div>
     </div>
 
 </div>
 
 <script>
-    // Cole aqui suas chaves do Firebase
-    const firebaseConfig = {
+   const firebaseConfig = {
   apiKey: "AIzaSyA-2SH_h57k24EKQXLjOkWsrs70tbSbFGE",
   authDomain: "depositorancho-43b21.firebaseapp.com",
   databaseURL: "https://depositorancho-43b21-default-rtdb.firebaseio.com",
@@ -147,7 +145,7 @@
                 document.getElementById('app-content').style.display = 'block';
                 if(currentUserLevel === 'OPERADOR') document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
                 switchTab(currentUserLevel === 'ADMIN' ? 'entrada' : 'saida');
-            } else { alert("Acesso negado: Verifique usuário e senha."); }
+            } else { alert("Acesso negado."); }
         });
     }
 
@@ -166,6 +164,10 @@
             });
         }
         if(tab === 'estoque') renderEstoque();
+        if(tab === 'diario') {
+            document.getElementById('busca-data-diario').valueAsDate = new Date();
+            renderDiario();
+        }
     }
 
     function processar(tipo) {
@@ -177,7 +179,7 @@
         database.ref('estoque/' + code).once('value', snap => {
             let d = snap.val() || { nome: code, saldo: 0, setor: 'SECO' };
             let novoSaldo = tipo === 'ENTRADA' ? d.saldo + qtd : d.saldo - qtd;
-            if(novoSaldo < 0) return alert("Saldo insuficiente!");
+            if(novoSaldo < 0) return alert("Sem saldo!");
 
             const update = {
                 saldo: novoSaldo,
@@ -186,11 +188,14 @@
                 validade: tipo === 'ENTRADA' ? document.getElementById('ent-validade').value : (d.validade || "")
             };
             database.ref('estoque/' + code).update(update);
-            database.ref('logs/' + new Date().toISOString().split('T')[0]).push({
+            
+            // Grava o log com data para o Diário
+            const dataHoje = new Date().toISOString().split('T')[0];
+            database.ref('logs/' + dataHoje).push({
                 tipo, nome: update.nome, qtd, hora: new Date().toLocaleTimeString()
             });
             document.getElementById(prefix + '-code').value = '';
-            alert("Operação concluída!");
+            alert("Sucesso!");
         });
     }
 
@@ -200,37 +205,44 @@
             const tbFrigo = document.getElementById('lista-frigo');
             const tbSecos = document.getElementById('lista-secos');
             tbFrigo.innerHTML = ''; tbSecos.innerHTML = '';
-            let soma = 0;
-            let itens = [];
-            
+            let soma = 0; let itens = [];
             snap.forEach(c => { itens.push(c.val()); });
-            
-            // ORDEM ALFABÉTICA
             itens.sort((a, b) => a.nome.localeCompare(b.nome));
-
             const hoje = new Date();
-            const limiteVenc = new Date();
-            limiteVenc.setDate(hoje.getDate() + 15);
+            const limiteVenc = new Date(); limiteVenc.setDate(hoje.getDate() + 15);
 
             itens.forEach(i => {
                 if(i.nome.toLowerCase().includes(filtro)) {
                     soma += i.saldo;
-                    let alertClass = "";
-                    if(i.validade) {
-                        const dataVenc = new Date(i.validade);
-                        if(dataVenc <= limiteVenc) alertClass = "vencendo";
-                    }
-
-                    const row = `<tr><td><b>${i.nome}</b></td><td align="center">${i.saldo}</td><td class="${alertClass}">${i.validade || '-'}</td></tr>`;
+                    let classe = i.validade && new Date(i.validade) <= limiteVenc ? "vencendo" : "";
+                    const row = `<tr><td><b>${i.nome}</b></td><td align="center">${i.saldo}</td><td class="${classe}">${i.validade || '-'}</td></tr>`;
                     if(i.setor === 'FRIGORIFICO') tbFrigo.innerHTML += row;
                     else tbSecos.innerHTML += row;
                 }
             });
-            document.getElementById('soma-total').innerText = filtro ? `TOTAL FILTRADO: ${soma}` : "";
+            document.getElementById('soma-total').innerText = filtro ? `SOMA: ${soma}` : "";
         });
     }
 
-    database.ref('estoque').on('value', renderEstoque);
+    function renderDiario() {
+        const dataBusca = document.getElementById('busca-data-diario').value;
+        const container = document.getElementById('lista-diaria');
+        container.innerHTML = 'Carregando...';
+
+        database.ref('logs/' + dataBusca).once('value', snap => {
+            container.innerHTML = '';
+            if(!snap.exists()) { container.innerHTML = '<p>Nenhuma movimentação neste dia.</p>'; return; }
+            snap.forEach(l => {
+                const log = l.val();
+                const cor = log.tipo === 'ENTRADA' ? '#10b981' : '#ef4444';
+                container.innerHTML += `
+                    <div class="log-item">
+                        <span><b>${log.hora.substring(0,5)}</b> - ${log.nome}</span>
+                        <span style="color:${cor}; font-weight:800">${log.tipo === 'ENTRADA' ? '+' : '-'}${log.qtd}</span>
+                    </div>`;
+            });
+        });
+    }
 </script>
 </body>
 </html>
