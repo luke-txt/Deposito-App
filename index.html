@@ -880,15 +880,33 @@ function autocomplete() {
   const list = document.getElementById('ac-list');
   acSelectedIndex = -1;
 
-  // Limpa preview se o usuário apagou tudo
+  // Limpa seleção ao digitar novamente
+  document.getElementById('sai-code').value = '';
+
   if (!val) {
     list.style.display = 'none';
-    document.getElementById('sai-code').value = '';
     document.getElementById('sai-preview').style.display = 'none';
     return;
   }
 
-  // Busca no cache local (já carregado do Firebase)
+  // Se cache vazio, força leitura do Firebase e chama de novo
+  if (Object.keys(estoqueCache).length === 0) {
+    db.ref('estoque').once('value', snap => {
+      snap.forEach(c => {
+        const item = c.val();
+        if (!item) return;
+        estoqueCache[c.key] = {
+          nome: item.nome || c.key,
+          saldo: Number(item.saldo) || 0,
+          setor: item.setor || 'SECO',
+          validade: item.validade || ''
+        };
+      });
+      autocomplete();
+    });
+    return;
+  }
+
   acItems = Object.entries(estoqueCache)
     .filter(([code, item]) => {
       const nome = (item.nome || '').toLowerCase();
@@ -898,21 +916,51 @@ function autocomplete() {
     .sort((a, b) => (a[1].nome || '').localeCompare(b[1].nome || ''))
     .slice(0, 10);
 
+  // Monta via DOM — sem risco de quebrar por aspas ou caracteres especiais
+  list.innerHTML = '';
+
   if (!acItems.length) {
-    list.innerHTML = '<div class="autocomplete-item" style="color:var(--text-muted);cursor:default">Nenhum produto encontrado</div>';
+    const empty = document.createElement('div');
+    empty.className = 'autocomplete-item';
+    empty.style.cssText = 'color:var(--text-muted);cursor:default';
+    empty.textContent = 'Nenhum produto encontrado';
+    list.appendChild(empty);
     list.style.display = 'block';
     return;
   }
 
-  list.innerHTML = acItems.map(([code, item], i) => `
-    <div class="autocomplete-item" onclick="selecionarItem('${code.replace(/'/g,"\\'")}'); " data-idx="${i}">
-      <div>
-        <div style="font-weight:600">${item.nome}</div>
-        <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace">${code}</div>
-      </div>
-      <span class="ac-saldo badge ${item.saldo > 0 ? 'badge-green' : 'badge-red'}">${item.saldo} un.</span>
-    </div>
-  `).join('');
+  acItems.forEach(([code, item]) => {
+    const div = document.createElement('div');
+    div.className = 'autocomplete-item';
+
+    const left = document.createElement('div');
+
+    const nomeEl = document.createElement('div');
+    nomeEl.style.fontWeight = '600';
+    nomeEl.textContent = item.nome;
+
+    const codeEl = document.createElement('div');
+    codeEl.style.cssText = "font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace";
+    codeEl.textContent = code;
+
+    left.appendChild(nomeEl);
+    left.appendChild(codeEl);
+
+    const badge = document.createElement('span');
+    badge.className = 'ac-saldo badge ' + (item.saldo > 0 ? 'badge-green' : 'badge-red');
+    badge.textContent = item.saldo + ' un.';
+
+    div.appendChild(left);
+    div.appendChild(badge);
+
+    div.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // evita que o blur feche a lista antes do click
+      selecionarItem(code);
+    });
+
+    list.appendChild(div);
+  });
+
   list.style.display = 'block';
 }
 
@@ -934,24 +982,28 @@ function acKeyNav(e) {
 
 function selecionarItem(code) {
   const item = estoqueCache[code];
-  if (!item) return;
+  if (!item) { toast('Produto não encontrado. Tente novamente.', 'error'); return; }
+
   document.getElementById('sai-code').value = code;
   document.getElementById('sai-busca').value = item.nome;
   document.getElementById('ac-list').style.display = 'none';
 
-  // Preview
   document.getElementById('sai-preview').style.display = 'block';
   document.getElementById('sai-preview-nome').textContent = item.nome;
-  document.getElementById('sai-preview-saldo').textContent = `${item.saldo} em estoque`;
+  document.getElementById('sai-preview-saldo').textContent = item.saldo + ' em estoque';
+
   const dias = diasAteVencer(item.validade);
-  const valTxt = item.validade ? `Val: ${item.validade}` : 'Sem validade';
+  const valTxt = item.validade ? 'Val: ' + item.validade : 'Sem validade';
   const valEl = document.getElementById('sai-preview-val');
   valEl.textContent = valTxt;
   valEl.className = 'badge ' + (dias !== null && dias <= 7 ? 'badge-red' : dias !== null && dias <= 30 ? 'badge-yellow' : 'badge-gray');
 }
 
 document.addEventListener('click', e => {
-  if (!e.target.closest('.autocomplete-wrap')) document.getElementById('ac-list').style.display = 'none';
+  if (!e.target.closest('.autocomplete-wrap')) {
+    const list = document.getElementById('ac-list');
+    if (list) list.style.display = 'none';
+  }
 });
 
 // ══════════════════════════════════════════
