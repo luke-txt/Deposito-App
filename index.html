@@ -70,6 +70,7 @@
 
 <div class="container" id="app-content" style="display:none">
     
+    <!-- ENTRADA -->
     <div id="page-entrada" class="page">
         <div id="reader-entry"></div>
         <div class="card">
@@ -82,6 +83,7 @@
         </div>
     </div>
 
+    <!-- SAÍDA -->
     <div id="page-saida" class="page">
         <div id="reader-exit"></div>
         <div class="card">
@@ -91,6 +93,7 @@
         </div>
     </div>
 
+    <!-- ESTOQUE -->
     <div id="page-estoque" class="page">
         <div class="card">
             <input type="text" id="filtro-estoque" onkeyup="renderEstoque()" placeholder="Pesquisar...">
@@ -102,7 +105,7 @@
         <table><thead><tr><th>Item</th><th>Qtd</th><th>Validade</th></tr></thead><tbody id="lista-secos"></tbody></table>
     </div>
 
-    <!-- NOVA ABA: SAÍDA DIÁRIA (ADMIN) -->
+    <!-- SAÍDA DIÁRIA -->
     <div id="page-diario" class="page">
         <div class="card">
             <label style="font-size:12px; font-weight:800">FILTRAR POR DATA</label>
@@ -111,6 +114,7 @@
         </div>
     </div>
 
+    <!-- RELATÓRIOS -->
     <div id="page-relatorio" class="page">
         <div class="card"><h3>Relatórios Gerais</h3><p>Consultas de fechamento semanal e mensal.</p></div>
     </div>
@@ -118,6 +122,7 @@
 </div>
 
 <script>
+    // === COLOQUE SUAS CHAVES AQUI ===
    const firebaseConfig = {
   apiKey: "AIzaSyA-2SH_h57k24EKQXLjOkWsrs70tbSbFGE",
   authDomain: "depositorancho-43b21.firebaseapp.com",
@@ -127,7 +132,6 @@
   messagingSenderId: "883363350930",
   appId: "1:883363350930:web:3da976d452d26837ef994b"
 };
-
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
     let currentUserLevel = null;
@@ -189,7 +193,6 @@
             };
             database.ref('estoque/' + code).update(update);
             
-            // Grava o log com data para o Diário
             const dataHoje = new Date().toISOString().split('T')[0];
             database.ref('logs/' + dataHoje).push({
                 tipo, nome: update.nome, qtd, hora: new Date().toLocaleTimeString()
@@ -200,19 +203,36 @@
     }
 
     function renderEstoque() {
-        const filtro = document.getElementById('filtro-estoque').value.toLowerCase();
+        const filtroInput = document.getElementById('filtro-estoque');
+        const filtro = filtroInput ? filtroInput.value.toLowerCase() : '';
+        
         database.ref('estoque').once('value', snap => {
             const tbFrigo = document.getElementById('lista-frigo');
             const tbSecos = document.getElementById('lista-secos');
+            if(!tbFrigo || !tbSecos) return;
+            
             tbFrigo.innerHTML = ''; tbSecos.innerHTML = '';
-            let soma = 0; let itens = [];
-            snap.forEach(c => { itens.push(c.val()); });
-            itens.sort((a, b) => a.nome.localeCompare(b.nome));
+            let soma = 0; 
+            let itens = [];
+            
+            // TRATAMENTO ANTI-ERROS: Previne falha com itens sem nome
+            snap.forEach(c => { 
+                let item = c.val();
+                if(!item.nome) item.nome = c.key; // Se não tiver nome, usa o código
+                if(!item.setor) item.setor = 'SECO';
+                if(!item.saldo) item.saldo = 0;
+                itens.push(item); 
+            });
+            
+            // ORDEM ALFABÉTICA SEGURA
+            itens.sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
+
             const hoje = new Date();
             const limiteVenc = new Date(); limiteVenc.setDate(hoje.getDate() + 15);
 
             itens.forEach(i => {
-                if(i.nome.toLowerCase().includes(filtro)) {
+                const nomeSeguro = String(i.nome).toLowerCase();
+                if(nomeSeguro.includes(filtro)) {
                     soma += i.saldo;
                     let classe = i.validade && new Date(i.validade) <= limiteVenc ? "vencendo" : "";
                     const row = `<tr><td><b>${i.nome}</b></td><td align="center">${i.saldo}</td><td class="${classe}">${i.validade || '-'}</td></tr>`;
@@ -220,18 +240,23 @@
                     else tbSecos.innerHTML += row;
                 }
             });
-            document.getElementById('soma-total').innerText = filtro ? `SOMA: ${soma}` : "";
+            
+            const badgeSoma = document.getElementById('soma-total');
+            if(badgeSoma) badgeSoma.innerText = filtro ? `SOMA: ${soma}` : "";
         });
     }
 
     function renderDiario() {
         const dataBusca = document.getElementById('busca-data-diario').value;
         const container = document.getElementById('lista-diaria');
+        if(!container) return;
+        
         container.innerHTML = 'Carregando...';
 
         database.ref('logs/' + dataBusca).once('value', snap => {
             container.innerHTML = '';
-            if(!snap.exists()) { container.innerHTML = '<p>Nenhuma movimentação neste dia.</p>'; return; }
+            if(!snap.exists()) { container.innerHTML = '<p style="color:#94a3b8; font-size:14px;">Nenhuma movimentação registrada nesta data.</p>'; return; }
+            
             snap.forEach(l => {
                 const log = l.val();
                 const cor = log.tipo === 'ENTRADA' ? '#10b981' : '#ef4444';
@@ -243,6 +268,9 @@
             });
         });
     }
+
+    // Monitora o banco e atualiza a tela automaticamente
+    database.ref('estoque').on('value', renderEstoque);
 </script>
 </body>
 </html>
