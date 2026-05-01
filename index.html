@@ -247,7 +247,7 @@ tr:hover td{background:var(--surface2)}
           <option value="pct">Pacote (pct)</option>
         </select>
       </div>
-      <div class="field"><label>Quantidade</label><input type="number" id="ent-qtd" value="1" min="1"></div>
+      <div class="field"><label>Quantidade</label><input type="number" id="ent-qtd" value="1" min="0.001" step="any"></div>
       <button class="btn btn-green" id="btn-entrada">✓ CONFIRMAR ENTRADA</button>
     </div>
   </div>
@@ -274,7 +274,7 @@ tr:hover td{background:var(--surface2)}
         </div>
       </div>
       <input type="hidden" id="sai-code">
-      <div class="field"><label>Quantidade</label><input type="number" id="sai-qtd" value="1" min="1"></div>
+      <div class="field"><label>Quantidade</label><input type="number" id="sai-qtd" value="1" min="0.001" step="any"></div>
       <div class="field"><label>Data da Saída (Opcional - Deixe vazio para usar a data de hoje)</label><input type="date" id="sai-data"></div>
       <button class="btn btn-red" id="btn-saida">✓ CONFIRMAR SAÍDA</button>
     </div>
@@ -374,7 +374,7 @@ tr:hover td{background:var(--surface2)}
         <option value="pct">Pacote (pct)</option>
       </select>
     </div>
-    <div class="field"><label>Quantidade em estoque</label><input type="number" id="edit-saldo" min="0"></div>
+    <div class="field"><label>Quantidade em estoque</label><input type="number" id="edit-saldo" min="0" step="any"></div>
     <div style="display:flex;gap:10px;margin-top:6px">
       <button class="btn btn-gray" style="flex:1" id="btn-modal-cancel">CANCELAR</button>
       <button class="btn btn-blue" style="flex:2" id="btn-modal-save">SALVAR</button>
@@ -722,11 +722,14 @@ function selecionarItem(code) {
   vel.className = 'badge ' + (dias!==null && dias<=7 ? 'b-red' : dias!==null && dias<=30 ? 'b-yellow' : 'b-gray');
 }
 
-// ══════ PROCESSAR ══════
 // ══════ PROCESSAR E GRAVAR (CORRIGIDOS) ══════
 function processar(tipo) {
-  const qtd = parseInt(document.getElementById(tipo==='ENTRADA' ? 'ent-qtd' : 'sai-qtd').value);
-  if (!qtd || qtd < 1) { toast('Quantidade inválida.', 'err'); return; }
+  // Pega o texto digitado e troca vírgula por ponto para o JavaScript conseguir calcular
+  let inputVal = document.getElementById(tipo==='ENTRADA' ? 'ent-qtd' : 'sai-qtd').value;
+  const qtd = parseFloat(inputVal.replace(',', '.'));
+  
+  // Agora aceita valores maiores que zero (como 0.5)
+  if (isNaN(qtd) || qtd <= 0) { toast('Quantidade inválida.', 'err'); return; }
 
   if (tipo === 'ENTRADA') {
     const code = document.getElementById('ent-code').value.trim();
@@ -933,8 +936,10 @@ function salvarEdicao() {
   const nome = document.getElementById('edit-nome').value.trim();
   const validade = document.getElementById('edit-val').value;
   const setor = document.getElementById('edit-setor').value;
-  const saldo = parseInt(document.getElementById('edit-saldo').value);
   const unidade = document.getElementById('edit-unidade').value;
+  
+  // Mesmo ajuste aqui para aceitar frações na edição do estoque
+  const saldo = parseFloat(document.getElementById('edit-saldo').value.replace(',', '.'));
   
   if (!nome) { toast('Nome não pode ser vazio.', 'err'); return; }
   if (isNaN(saldo) || saldo < 0) { toast('Quantidade inválida.', 'err'); return; }
