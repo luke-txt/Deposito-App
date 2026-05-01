@@ -223,7 +223,66 @@
                 if(!item.saldo) item.saldo = 0;
                 itens.push(item); 
             });
-            
+
+            // === CÓDIGO ATUALIZADO (V11) COM CORREÇÃO DE DATA ===
+
+    // Função auxiliar para garantir que usamos SEMPRE a data local (Brasília)
+    // Isso resolve o erro de logs que "somem" ou aparecem no dia seguinte
+    function obterDataLocalFormatada(dateObj) {
+        const d = dateObj || new Date();
+        const ano = d.getFullYear();
+        // Adiciona zero à esquerda se for mês/dia 1-9
+        const mes = String(d.getMonth() + 1).padStart(2, '0');
+        const dia = String(d.getDate()).padStart(2, '0');
+        return `${ano}-${mes}-${dia}`; // Retorna YYYY-MM-DD local
+    }
+
+    // ... (restante do código de autenticação, navegação e estoque permanece igual) ...
+
+    function processar(tipo) {
+        // ... (código de verificação de saldo e atualização de estoque) ...
+
+            // === CORREÇÃO AQUI ===
+            // Agora pegamos a data local robusta para salvar o log
+            const dataHojeLocal = obterDataLocalFormatada(); 
+            database.ref('logs/' + dataHojeLocal).push({
+                tipo, 
+                nome: update.nome, 
+                qtd, 
+                hora: new Date().toLocaleTimeString('pt-BR') // Hora brasileira formatada
+            });
+
+            document.getElementById(prefix + '-code').value = '';
+            alert("Operação concluída e registrada no diário!");
+        });
+    }
+
+    // ... (renderEstoque permanece igual) ...
+
+    function renderDiario() {
+        const dataBusca = document.getElementById('busca-data-diario').value;
+        const container = document.getElementById('lista-diaria');
+        if(!container) return;
+        
+        container.innerHTML = 'Carregando movimentações...';
+
+        database.ref('logs/' + dataBusca).once('value', snap => {
+            // ... (restante da renderização do diário permanece igual) ...
+        });
+    }
+
+    // === CORREÇÃO NA INICIALIZAÇÃO DO DIÁRIO ===
+    // Quando mudamos para a aba diário, garantimos que ele começa mostrando a data local de hoje
+    async function switchTab(tab) {
+        // ... (código de troca de abas e câmera) ...
+        
+        if(tab === 'estoque') renderEstoque();
+        if(tab === 'diario') {
+            // Define o input de data para HOJE local robusto
+            document.getElementById('busca-data-diario').value = obterDataLocalFormatada();
+            renderDiario();
+        }
+    }
             // ORDEM ALFABÉTICA SEGURA
             itens.sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
 
