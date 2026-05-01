@@ -7,56 +7,9 @@
 <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2897/2897785.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js">
-// ══════════════════════════════════════════
-// EDITAR ITEM
-// ══════════════════════════════════════════
-let editandoCode = null;
-
-function abrirEditar(code) {
-  const item = estoqueCache[code];
-  if (!item) return;
-  editandoCode = code;
-  document.getElementById('edit-code-label').textContent = 'Código: ' + code;
-  document.getElementById('edit-nome').value = item.nome;
-  document.getElementById('edit-validade').value = item.validade || '';
-  document.getElementById('edit-setor').value = item.setor || 'SECO';
-  document.getElementById('edit-saldo').value = item.saldo || 0;
-  document.getElementById('edit-modal').classList.add('open');
-}
-
-function fecharModalDireto() {
-  document.getElementById('edit-modal').classList.remove('open');
-  editandoCode = null;
-}
-
-function fecharModal(e) {
-  // Fecha só se clicar no overlay (fundo escuro), não no box
-  if (e.target === document.getElementById('edit-modal')) fecharModalDireto();
-}
-
-function salvarEdicao() {
-  if (!editandoCode) return;
-  const nome = document.getElementById('edit-nome').value.trim();
-  const validade = document.getElementById('edit-validade').value;
-  const setor = document.getElementById('edit-setor').value;
-  const saldo = parseInt(document.getElementById('edit-saldo').value);
-
-  if (!nome) { toast('Nome não pode ser vazio.', 'error'); return; }
-  if (isNaN(saldo) || saldo < 0) { toast('Quantidade inválida.', 'error'); return; }
-
-  db.ref('estoque/' + editandoCode).update({ nome, validade, setor, saldo })
-    .then(() => {
-      toast('✅ Produto atualizado!');
-      fecharModalDireto();
-    })
-    .catch(() => toast('Erro ao salvar. Tente novamente.', 'error'));
-}
-
-</script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
 <style>
   :root {
     --bg: #0d0f14;
@@ -639,6 +592,33 @@ function salvarEdicao() {
 
 <!-- TOAST -->
 <div id="toast"></div>
+
+
+<!-- MODAL EDITAR -->
+<div class="modal-overlay" id="edit-modal" onclick="fecharModal(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">✏️ Editar produto</div>
+      <button class="modal-close" onclick="fecharModalDireto()">✕</button>
+    </div>
+    <div class="modal-code-tag" id="edit-code-label"></div>
+    <div class="field"><label>Nome / Marca</label><input type="text" id="edit-nome" placeholder="Nome do produto"></div>
+    <div class="field"><label>Validade</label><input type="date" id="edit-validade"></div>
+    <div class="field">
+      <label>Setor</label>
+      <select id="edit-setor">
+        <option value="SECO">📦 Secos</option>
+        <option value="FRIGORIFICO">🥩 Frigorífico</option>
+      </select>
+    </div>
+    <div class="field"><label>Quantidade em estoque</label><input type="number" id="edit-saldo" min="0"></div>
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button class="btn" style="background:var(--surface2);color:var(--text-muted);flex:1" onclick="fecharModalDireto()">CANCELAR</button>
+      <button class="btn btn-primary" style="flex:2" onclick="salvarEdicao()">SALVAR ALTERAÇÕES</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
 // ══════════════════════════════════════════
@@ -1309,32 +1289,46 @@ function renderRanking(elId, data, cor) {
       <div class="rank-qty" style="color:${cor}">${qty}</div>
     </div>`).join('');
 }
+
+// ══════════════════════════════════════════
+// EDITAR ITEM
+// ══════════════════════════════════════════
+let editandoCode = null;
+
+function abrirEditar(code) {
+  const item = estoqueCache[code];
+  if (!item) { toast('Item não encontrado.', 'error'); return; }
+  editandoCode = code;
+  document.getElementById('edit-code-label').textContent = 'Código: ' + code;
+  document.getElementById('edit-nome').value = item.nome || '';
+  document.getElementById('edit-validade').value = item.validade || '';
+  document.getElementById('edit-setor').value = item.setor || 'SECO';
+  document.getElementById('edit-saldo').value = item.saldo || 0;
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function fecharModalDireto() {
+  document.getElementById('edit-modal').classList.remove('open');
+  editandoCode = null;
+}
+
+function fecharModal(e) {
+  if (e.target === document.getElementById('edit-modal')) fecharModalDireto();
+}
+
+function salvarEdicao() {
+  if (!editandoCode) return;
+  const nome = document.getElementById('edit-nome').value.trim();
+  const validade = document.getElementById('edit-validade').value;
+  const setor = document.getElementById('edit-setor').value;
+  const saldo = parseInt(document.getElementById('edit-saldo').value);
+  if (!nome) { toast('Nome não pode ser vazio.', 'error'); return; }
+  if (isNaN(saldo) || saldo < 0) { toast('Quantidade inválida.', 'error'); return; }
+  db.ref('estoque/' + editandoCode).update({ nome, validade, setor, saldo })
+    .then(() => { toast('✅ Produto atualizado!'); fecharModalDireto(); })
+    .catch(() => toast('Erro ao salvar.', 'error'));
+}
+
 </script>
-
-<!-- MODAL EDITAR -->
-<div class="modal-overlay" id="edit-modal" onclick="fecharModal(event)">
-  <div class="modal-box">
-    <div class="modal-header">
-      <div class="modal-title">✏️ Editar produto</div>
-      <button class="modal-close" onclick="fecharModalDireto()">✕</button>
-    </div>
-    <div class="modal-code-tag" id="edit-code-label"></div>
-    <div class="field"><label>Nome / Marca</label><input type="text" id="edit-nome" placeholder="Nome do produto"></div>
-    <div class="field"><label>Validade</label><input type="date" id="edit-validade"></div>
-    <div class="field">
-      <label>Setor</label>
-      <select id="edit-setor">
-        <option value="SECO">📦 Secos</option>
-        <option value="FRIGORIFICO">🥩 Frigorífico</option>
-      </select>
-    </div>
-    <div class="field"><label>Quantidade em estoque</label><input type="number" id="edit-saldo" min="0"></div>
-    <div style="display:flex;gap:10px;margin-top:6px">
-      <button class="btn" style="background:var(--surface2);color:var(--text-muted);flex:1" onclick="fecharModalDireto()">CANCELAR</button>
-      <button class="btn btn-primary" style="flex:2" onclick="salvarEdicao()">SALVAR ALTERAÇÕES</button>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>
