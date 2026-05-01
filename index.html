@@ -723,6 +723,7 @@ function selecionarItem(code) {
 }
 
 // ══════ PROCESSAR ══════
+// ══════ PROCESSAR E GRAVAR (CORRIGIDOS) ══════
 function processar(tipo) {
   const qtd = parseInt(document.getElementById(tipo==='ENTRADA' ? 'ent-qtd' : 'sai-qtd').value);
   if (!qtd || qtd < 1) { toast('Quantidade inválida.', 'err'); return; }
@@ -741,16 +742,24 @@ function processar(tipo) {
     return;
   }
 
-  // SAÍDA — verifica se produto foi selecionado
-  const code = document.getElementById('sai-code').value.trim();
+  // SAÍDA
+  let code = document.getElementById('sai-code').value.trim();
+  
+  // RECUPERANDO A FUNÇÃO DE DIGITAR MANUALMENTE 
   if (!code) {
-    toast('Selecione um produto da lista suspensa antes de confirmar.', 'err');
-    const val = document.getElementById('sai-busca').value.trim().toLowerCase();
-    if (val) { if(cacheReady) buildAcList(val); else onSaiBuscaInput(); }
-    return;
+    const textoBusca = document.getElementById('sai-busca').value.trim().toLowerCase();
+    const itemEncontrado = Object.entries(cache).find(([k, v]) => 
+      k.toLowerCase() === textoBusca || (v.nome && v.nome.toLowerCase() === textoBusca)
+    );
+    if (itemEncontrado) {
+      code = itemEncontrado[0];
+    } else {
+      toast('Selecione um produto da lista ou digite o nome exato.', 'err');
+      if (textoBusca && cacheReady) buildAcList(textoBusca);
+      return;
+    }
   }
   
-  // Pegar data opcional customizada da saída
   const dataManual = document.getElementById('sai-data').value;
   gravarMovimento('SAIDA', code, null, qtd, dataManual);
 }
@@ -768,15 +777,15 @@ function gravarMovimento(tipo, code, dadosEntrada, qtd, dataManual = null) {
 
     if (novoSaldo < 0) { toast('Saldo insuficiente! Há apenas ' + base.saldo + ' ' + (base.unidade||'un') + '.', 'err'); return; }
 
+    // CORREÇÃO: Assegurando que NADA vá como "undefined" para não quebrar o Firebase
     const novosDados = {
-      nome:    tipo === 'ENTRADA' ? dadosEntrada.nome    : base.nome,
+      nome:    tipo === 'ENTRADA' ? dadosEntrada.nome    : (base.nome || ''),
       saldo:   novoSaldo,
-      setor:   tipo === 'ENTRADA' ? dadosEntrada.setor   : base.setor,
-      validade:tipo === 'ENTRADA' ? dadosEntrada.validade: base.validade,
+      setor:   tipo === 'ENTRADA' ? dadosEntrada.setor   : (base.setor || 'SECO'),
+      validade:tipo === 'ENTRADA' ? dadosEntrada.validade: (base.validade || ''), // <-- A proteção voltou aqui!
       unidade: tipo === 'ENTRADA' ? dadosEntrada.unidade : (base.unidade || 'un')
     };
     
-    // Usa dataManual se existir, caso contrário dataLocal()
     const dataLog = dataManual ? dataManual : dataLocal();
 
     const updates = {};
@@ -796,12 +805,16 @@ function gravarMovimento(tipo, code, dadosEntrada, qtd, dataManual = null) {
         document.getElementById('sai-code').value = '';
         document.getElementById('sai-busca').value = '';
         document.getElementById('sai-qtd').value = 1;
-        document.getElementById('sai-data').value = ''; // Limpa a data de saída customizada
+        document.getElementById('sai-data').value = ''; 
         document.getElementById('sai-preview-box').style.display = 'none';
       }
     }).catch(err => { console.error(err); toast('Erro ao gravar: ' + err.code, 'err'); });
 
-  }).catch(err => { console.error(err); toast('Erro ao buscar produto: ' + err.code, 'err'); });
+  }).catch(err => { 
+    console.error(err); 
+    // Melhoria: Mostra o erro real se o Firebase surtar de novo
+    toast('Erro: ' + (err.message || 'Desconhecido'), 'err'); 
+  });
 }
 
 // ══════ ESTOQUE ══════
