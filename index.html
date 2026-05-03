@@ -335,7 +335,7 @@ tr:hover td{background:rgba(201,168,76,.04)}
   <div class="nav-item level-admin" data-tab="usuarios">👥 Usuários</div>
 
   <div class="nav-item" id="btn-nav-logout" style="margin-left:auto;color:var(--red)" title="Sair">
-    🚪 Sair
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sair
   </div>
 </nav>
 
@@ -1551,7 +1551,9 @@ function criarUsuario() {
     })
     .catch(err=>{
       secondaryApp.delete().catch(()=>{});
-      const msg = err.code==='auth/email-already-in-use' ? 'Email já cadastrado.' : 'Erro: '+err.message;
+      const msg = err.code==='auth/email-already-in-use'
+        ? 'Email já existe no sistema de autenticação. Se o usuário foi excluído recentemente, apague-o também em Firebase Console → Authentication → Users antes de recriar.'
+        : 'Erro: '+err.message;
       toast(msg,'err');
     });
 }
@@ -1607,18 +1609,19 @@ function confirmarApagarUsuario(uid, nome) {
   if (!podeAcessar('ADMIN')) { toast('Acesso negado.', 'err'); return; }
   if (currentUser && uid === currentUser.uid) { toast('Não pode apagar a si mesmo.', 'err'); return; }
 
-  // Reutiliza o confirm-modal
-  document.getElementById('confirm-nome').textContent = nome;
-  document.getElementById('confirm-det').textContent  = 'Esta ação removerá o acesso permanentemente.';
-  document.getElementById('confirm-msg').textContent  = '⚠️ O usuário não conseguirá mais entrar no sistema. Os logs de movimentação serão mantidos.';
-  document.getElementById('confirm-modal').classList.add('open');
-
-  confirmCallback = () => apagarUsuario(uid, nome);
+  // Busca o email do usuário para mostrar na confirmação
+  db.ref('config/usuarios/' + uid + '/email').once('value').then(snap => {
+    const email = snap.val() || '';
+    document.getElementById('confirm-nome').textContent = nome;
+    document.getElementById('confirm-det').textContent  = email;
+    document.getElementById('confirm-msg').textContent  = '⚠️ O acesso será bloqueado imediatamente. Para reusar este email no futuro, apague também em Firebase Console → Authentication.';
+    document.getElementById('confirm-modal').classList.add('open');
+    confirmCallback = () => apagarUsuario(uid, nome);
+  });
 }
 
 function apagarUsuario(uid, nome) {
-  // Remove o perfil do Realtime Database
-  // (o registro no Firebase Auth permanece inativo — não temos Admin SDK no client)
+  // 1. Remove perfil do Realtime Database
   db.ref('config/usuarios/' + uid).remove()
     .then(() => {
       toast('🗑️ Usuário removido: ' + nome);
@@ -1629,7 +1632,23 @@ function apagarUsuario(uid, nome) {
         ts: Date.now()
       });
     })
-    .catch(err => toast('Erro ao apagar: ' + err.code, 'err'));
+    .catch(err => toast('Erro ao apagar do banco: ' + err.code, 'err'));
+
+  // 2. Apaga do Firebase Authentication usando secondary app
+  // O Admin cria uma instância secundária, mas não conseguimos deletar outro
+  // usuário sem o Admin SDK. A solução client-side é desabilitar no DB (ativo:false)
+  // Para recriar o mesmo email: vá em Firebase Console → Authentication → apague manualmente.
+  // Ou use esta função que tenta apagar via secondary app sign-in (só funciona se souber a senha):
+  // db.ref('config/usuarios/' + uid + '/email') para pegar o email e tentar deletar.
+  // NOTA: sem a senha do usuário não é possível deletar do Auth via client SDK.
+  // A remoção do DB já barra o acesso imediatamente.
+}
+
+// Função auxiliar para recriar usuário com mesmo email após exclusão manual no Firebase Console
+// Acesse: https://console.firebase.google.com → Authentication → Users → encontre o email → delete
+function instrucaoRecriarUsuario(email) {
+  toast('Para reusar este email: apague em Firebase Console → Authentication → Users', 'warn');
+  console.info('Recriar usuário: Firebase Console → Authentication → Users → delete ' + email);
 }
 
 </script>
