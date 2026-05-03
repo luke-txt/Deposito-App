@@ -2,7 +2,10 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#121812">
 <title>Depósito Aprov</title>
 <link rel="icon" href="intendencia2.png" type="image/png">
 <link rel="apple-touch-icon" href="intendencia2.png">
@@ -26,7 +29,7 @@
 }
 body.light{--bg:#f1f4ee;--surface:#fff;--surface2:#eaf0e6;--surface3:#dde6d8;--border:#c8d8c0;--border2:#b0c4a8;--text:#1a2218;--text2:#3d5238;--muted:#7a9470;--card-grad:linear-gradient(145deg,#fff,#f7faf5)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-top:var(--nav);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E")}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-top:var(--nav);min-height:100dvh;overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E")}
 
 /* LOGIN */
 #login-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
@@ -101,9 +104,10 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 /* INPUTS */
 .field{margin-bottom:12px}
 .field label{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
-input[type=text],input[type=password],input[type=number],input[type=date],select,textarea{width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Sora',sans-serif;font-size:14px;transition:border-color .2s,box-shadow .2s;appearance:none}
+input[type=text],input[type=password],input[type=number],input[type=date],input[type=email],select,textarea{width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Sora',sans-serif;font-size:14px;transition:border-color .2s,box-shadow .2s;appearance:none}
 textarea{resize:vertical;min-height:70px}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-dim)}
+input[type=email]:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-dim)}
 input::placeholder,textarea::placeholder{color:var(--muted);font-size:13px}
 select option{background:var(--surface2)}
 
@@ -267,6 +271,7 @@ tr:hover td{background:rgba(201,168,76,.04)}
 #theme-btn{position:fixed;bottom:24px;right:20px;width:46px;height:46px;background:var(--surface2);border:1px solid var(--border2);border-radius:50%;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:18px;box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:800;transition:transform .2s,box-shadow .2s}
 #theme-btn:hover{transform:scale(1.1);box-shadow:0 6px 24px rgba(201,168,76,.2)}
 .empty{text-align:center;padding:30px 20px;color:var(--muted);font-size:13px}
+#btn-nav-logout:hover{background:var(--red-dim)}
 .divider{height:1px;background:var(--border);margin:16px 0}
 .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
@@ -328,6 +333,10 @@ tr:hover td{background:rgba(201,168,76,.04)}
   <div class="nav-item level-admin" data-tab="diario">📋 Diário</div>
   <div class="nav-item level-admin" data-tab="relatorio">📊 Relatórios</div>
   <div class="nav-item level-admin" data-tab="usuarios">👥 Usuários</div>
+
+  <div class="nav-item" id="btn-nav-logout" style="margin-left:auto;color:var(--red)" title="Sair">
+    <span style="font-size:15px">⏻</span> Sair
+  </div>
 </nav>
 
 <div class="container" id="app" style="display:none">
@@ -736,6 +745,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // Login / logout
   document.getElementById('inp-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') login(); });
   document.getElementById('btn-login').addEventListener('click', login);
+  // Logout
+  document.getElementById('btn-nav-logout').addEventListener('click', () => {
+    auth.signOut().then(() => {
+      document.getElementById('inp-email').value = '';
+      document.getElementById('inp-pass').value  = '';
+      document.getElementById('login-error').style.display = 'none';
+      document.getElementById('reset-panel').style.display = 'none';
+    });
+  });
+
   document.getElementById('btn-forgot').addEventListener('click', ()=>{
     const p=document.getElementById('reset-panel');
     p.style.display = p.style.display==='none'||!p.style.display ? 'block' : 'none';
