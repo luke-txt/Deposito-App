@@ -310,7 +310,6 @@ body.modo-operador #sai-data-field{display:none!important}
 <div id="auth-loading">
   <div class="spinner"></div>
   <div class="auth-loading-txt">Verificando sessão...</div>
-  <div id="debug-log" style="margin-top:20px;font-size:11px;color:#5a6e58;font-family:monospace;text-align:center;max-width:300px;line-height:1.8"></div>
 </div>
 
 <div id="login-screen" style="display:none">
@@ -889,34 +888,28 @@ document.addEventListener('DOMContentLoaded', () => {
 // ══════════════════════════════════════════════════════════
 // FIREBASE AUTH — observer (único ponto de entrada)
 // ══════════════════════════════════════════════════════════
-// Debug log visível na tela
-function dbg(msg) {
-  console.log('[Auth]', msg);
-  const el = document.getElementById('debug-log');
-  if (el) el.innerHTML += msg + '<br>';
-}
-
-dbg('Iniciando...');
-
-// Verifica se Firebase carregou
-if (typeof firebase === 'undefined') { dbg('❌ Firebase não carregou!'); }
-else { dbg('✅ Firebase OK'); }
-if (typeof firebase !== 'undefined' && typeof firebase.auth === 'undefined') { dbg('❌ firebase-auth não carregou!'); }
-else { dbg('✅ Auth SDK OK'); }
-
-// Timeout de segurança
+// Timeout de segurança — se Firebase não responder em 8s, mostra login
 const authTimeout = setTimeout(() => {
   const loading = document.getElementById('auth-loading');
   if (loading && loading.style.display !== 'none') {
-    dbg('⏰ Timeout — mostrando login');
     loading.style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
   }
 }, 8000);
 
+// Flag para processar o observer só uma vez
+let authResolved = false;
+
 auth.onAuthStateChanged(async firebaseUser => {
+  // Ignora disparos do secondary app (criarUsuario/resetSenha)
+  // e disparos repetidos após já ter resolvido
+  if (authResolved && firebaseUser && currentUser) return;
+  if (authResolved && !firebaseUser) {
+    // Logout real — limpa tudo
+    authResolved = false;
+  }
+
   clearTimeout(authTimeout);
-  dbg('onAuthStateChanged: ' + (firebaseUser ? '✅ logado' : '🔓 não logado'));
   const loading = document.getElementById('auth-loading');
   const loginScreen = document.getElementById('login-screen');
 
@@ -969,6 +962,7 @@ auth.onAuthStateChanged(async firebaseUser => {
     tb.style.display = 'flex';
     tb.textContent = darkMode ? '🌙' : '☀️';
 
+    authResolved = true;
     aplicarNivel();
     carregarCache();
     switchTab(userLevel === 'OPERADOR' ? 'saida' : 'dashboard');
@@ -1753,8 +1747,12 @@ function criarUsuario() {
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast('Email inválido.','err'); return; }
   if(pass.length<6){ toast('Senha mínimo 6 caracteres.','err'); return; }
 
-  const secondaryApp = firebase.initializeApp(firebaseConfig, 'secondary_'+Date.now());
-  secondaryApp.auth().createUserWithEmailAndPassword(email, pass)
+  // Usa secondary app isolado para não disparar o onAuthStateChanged principal
+  const secAppName = 'sec_'+Date.now();
+  const secondaryApp = firebase.initializeApp(firebaseConfig, secAppName);
+  const secAuth = secondaryApp.auth();
+
+  secAuth.createUserWithEmailAndPassword(email, pass)
     .then(cred=>{
       const uid=cred.user.uid;
       return db.ref('config/usuarios/'+uid).set({
@@ -1762,8 +1760,9 @@ function criarUsuario() {
         criadoPor: currentUser?currentUser.email:'',
         criadoEm: Date.now()
       }).then(()=>{
-        secondaryApp.auth().signOut();
-        secondaryApp.delete();
+        // Desloga e destrói o secondary ANTES de qualquer outra ação
+        return secAuth.signOut().then(()=>secondaryApp.delete());
+      }).then(()=>{
         toast('✅ Usuário criado: '+nome);
         document.getElementById('new-user-nome').value='';
         document.getElementById('new-user-login').value='';
@@ -1773,9 +1772,10 @@ function criarUsuario() {
       });
     })
     .catch(err=>{
+      secAuth.signOut().catch(()=>{});
       secondaryApp.delete().catch(()=>{});
       const msg = err.code==='auth/email-already-in-use'
-        ? 'Email já existe no sistema de autenticação. Se o usuário foi excluído recentemente, apague-o também em Firebase Console → Authentication → Users antes de recriar.'
+        ? 'Email já cadastrado. Se excluiu recentemente, apague também em Firebase Console → Authentication → Users.'
         : 'Erro: '+err.message;
       toast(msg,'err');
     });
