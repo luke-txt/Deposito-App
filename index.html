@@ -35,6 +35,9 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .login-logo-img{width:120px;height:auto;margin:0 auto 20px;display:block;filter:drop-shadow(0 4px 14px rgba(201,168,76,.3))}
 .login-box h2{font-size:20px;font-weight:800;letter-spacing:.5px;margin-bottom:4px}
 .login-box p{font-size:12px;color:var(--muted);margin-bottom:28px}
+.login-box .field{text-align:left}
+.login-box .field label{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.login-box input{text-align:left}
 #login-error{color:var(--red);font-size:12px;margin-top:10px;display:none}
 
 /* NAV */
@@ -297,10 +300,16 @@ tr:hover td{background:rgba(201,168,76,.04)}
     <img src="intendencia.png" alt="Logo" class="login-logo-img">
     <h2>Depósito Aprov</h2>
     <p>Sistema de Controle de Estoque</p>
-    <div class="field"><label>Email</label><input type="email" id="inp-email" placeholder="seu@email.com" autocomplete="email"></div>
-    <div class="field"><label>Senha</label><input type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password"></div>
-    <button class="btn btn-gold" id="btn-login">ENTRAR</button>
-    <div id="login-error">Usuário ou senha incorretos.</div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="inp-email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-gold" id="btn-login" style="margin-top:4px">ENTRAR</button>
+    <div id="login-error">Email ou senha incorretos.</div>
     <div class="forgot-link" id="btn-forgot">Esqueci minha senha →</div>
     <div id="reset-panel">
       <p>Solicite ao <b>Administrador</b> que redefina sua senha pelo painel de Usuários.</p>
@@ -521,9 +530,10 @@ tr:hover td{background:rgba(201,168,76,.04)}
     </div>
     <div class="card accent-blue">
       <div class="card-title">Novo usuário</div>
+      <div class="field"><label>Nome completo</label><input type="text" id="new-user-nome" placeholder="Ex: João Silva" autocomplete="off"></div>
       <div class="row-2">
-        <div class="field"><label>Login</label><input type="text" id="new-user-login" placeholder="Ex: joao.silva" autocomplete="off"></div>
-        <div class="field"><label>Senha</label><input type="password" id="new-user-pass" placeholder="Mínimo 6 caracteres"></div>
+        <div class="field"><label>Email</label><input type="email" id="new-user-login" placeholder="email@exemplo.com" autocomplete="off"></div>
+        <div class="field"><label>Senha inicial</label><input type="password" id="new-user-pass" placeholder="Mínimo 6 caracteres"></div>
       </div>
       <div class="field"><label>Nível de acesso</label>
         <select id="new-user-nivel">
@@ -860,7 +870,8 @@ auth.onAuthStateChanged(async firebaseUser => {
     currentUser = {
       uid:   firebaseUser.uid,
       email: firebaseUser.email,
-      nome:  perfil.nome || firebaseUser.email.split('@')[0]
+      nome:  perfil.nome || firebaseUser.email.split('@')[0],
+      nomeCompleto: perfil.nome || firebaseUser.email.split('@')[0]
     };
 
     // Registra login na auditoria
@@ -1024,8 +1035,8 @@ async function switchTab(tab) {
 // ══════════════════════════════════════════════════════════
 function renderDashboard() {
   const itens = Object.values(cache);
-  const nome  = currentUser ? currentUser.nome : '';
-  document.getElementById('dash-greeting').textContent = saudacao()+', '+nome+'!';
+  const nomeExibir = currentUser ? (currentUser.nome || currentUser.email.split('@')[0]) : '';
+  document.getElementById('dash-greeting').textContent = saudacao()+', '+nomeExibir+'!';
   document.getElementById('dash-user-label').textContent =
     (nivelLabel(userLevel).replace(/<[^>]+>/g,'')) + ' · ' +
     new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
@@ -1478,8 +1489,8 @@ function renderUsuarios() {
       const uid=u.key, ud=u.val(), ativo=ud.ativo!==false, isMe=currentUser&&uid===currentUser.uid;
       html+=`<div class="user-item">
         <div>
-          <div class="user-name">${ud.email||uid} ${isMe?'<span style="font-size:10px;color:var(--muted)">(você)</span>':''}</div>
-          <div class="user-level">${nivelLabel(ud.nivel||'OPERADOR')} ${ativo?'':'<span class="badge b-red" style="font-size:9px">INATIVO</span>'}</div>
+          <div class="user-name">${ud.nome||ud.email||uid} ${isMe?'<span style="font-size:10px;color:var(--muted)">(você)</span>':''}</div>
+          <div class="user-level">${nivelLabel(ud.nivel||'OPERADOR')} <span style="font-size:11px;color:var(--muted)">${ud.email||''}</span> ${ativo?'':'<span class="badge b-red" style="font-size:9px">INATIVO</span>'}</div>
         </div>
         <div class="user-actions">
           ${!isMe?`<button class="btn btn-ghost btn-sm" onclick="toggleAtivoUsuario('${uid}',${ativo},'${ud.email||''}',${ativo})">${ativo?'🚫':'✅'}</button>`:''}
@@ -1493,31 +1504,32 @@ function renderUsuarios() {
 
 function criarUsuario() {
   if(!podeAcessar('ADMIN')){ toast('Acesso negado.','err'); return; }
-  const email=document.getElementById('new-user-login').value.trim().toLowerCase();
-  const pass =document.getElementById('new-user-pass').value;
-  const nivel=document.getElementById('new-user-nivel').value;
+  const nome  = document.getElementById('new-user-nome').value.trim();
+  const email = document.getElementById('new-user-login').value.trim().toLowerCase();
+  const pass  = document.getElementById('new-user-pass').value;
+  const nivel = document.getElementById('new-user-nivel').value;
+  if(!nome){ toast('Informe o nome do usuário.','err'); return; }
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast('Email inválido.','err'); return; }
   if(pass.length<6){ toast('Senha mínimo 6 caracteres.','err'); return; }
 
-  // Cria no Firebase Auth via Admin SDK não está disponível no client SDK.
-  // Solução segura para client-only: cria usuário com createUserWithEmailAndPassword
-  // salvando o perfil no DB com o UID como chave.
-  // IMPORTANTE: isso faz signIn temporário — usamos secondary app para evitar
-  // trocar o usuário logado.
   const secondaryApp = firebase.initializeApp(firebaseConfig, 'secondary_'+Date.now());
   secondaryApp.auth().createUserWithEmailAndPassword(email, pass)
     .then(cred=>{
       const uid=cred.user.uid;
-      return db.ref('config/usuarios/'+uid).set({ email, nivel, ativo:true, criadoPor: currentUser?currentUser.email:'', criadoEm: Date.now() })
-        .then(()=>{
-          secondaryApp.auth().signOut();
-          secondaryApp.delete();
-          toast('✅ Usuário criado: '+email);
-          document.getElementById('new-user-login').value='';
-          document.getElementById('new-user-pass').value='';
-          renderUsuarios();
-          db.ref('auditoria/usuarios').push({acao:'criar',email,nivel,feito_por:currentUser?currentUser.email:'',ts:Date.now()});
-        });
+      return db.ref('config/usuarios/'+uid).set({
+        nome, email, nivel, ativo:true,
+        criadoPor: currentUser?currentUser.email:'',
+        criadoEm: Date.now()
+      }).then(()=>{
+        secondaryApp.auth().signOut();
+        secondaryApp.delete();
+        toast('✅ Usuário criado: '+nome);
+        document.getElementById('new-user-nome').value='';
+        document.getElementById('new-user-login').value='';
+        document.getElementById('new-user-pass').value='';
+        renderUsuarios();
+        db.ref('auditoria/usuarios').push({acao:'criar',nome,email,nivel,feito_por:currentUser?currentUser.email:'',ts:Date.now()});
+      });
     })
     .catch(err=>{
       secondaryApp.delete().catch(()=>{});
