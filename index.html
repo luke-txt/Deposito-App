@@ -700,6 +700,14 @@ firebase.initializeApp(firebaseConfig);
 const db   = firebase.database();
 const auth = firebase.auth();
 
+// App Check — ativado só após registrar o app no Firebase Console → App Check → Apps
+// Descomente as linhas abaixo DEPOIS de registrar o app:
+// const appCheck = firebase.appCheck();
+// appCheck.activate(
+//   new firebase.appCheck.ReCaptchaV3Provider('6Lc81NcsAAAAANKyCFJ-QrBnv-kBN0wlMa8E4dkw'),
+//   true
+// );
+
 // ══════════════════════════════════════════════════════════
 // NÍVEIS  OPERADOR < SUPERVISOR < ADMIN
 // ══════════════════════════════════════════════════════════
