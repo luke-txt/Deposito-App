@@ -531,10 +531,8 @@ tr:hover td{background:rgba(201,168,76,.04)}
     <div class="card accent-blue">
       <div class="card-title">Novo usuário</div>
       <div class="field"><label>Nome completo</label><input type="text" id="new-user-nome" placeholder="Ex: João Silva" autocomplete="off"></div>
-      <div class="row-2">
-        <div class="field"><label>Email</label><input type="email" id="new-user-login" placeholder="email@exemplo.com" autocomplete="off"></div>
-        <div class="field"><label>Senha inicial</label><input type="password" id="new-user-pass" placeholder="Mínimo 6 caracteres"></div>
-      </div>
+      <div class="field"><label>Email</label><input type="email" id="new-user-login" placeholder="email@exemplo.com" autocomplete="off"></div>
+      <div class="field"><label>Senha inicial</label><input type="password" id="new-user-pass" placeholder="Mínimo 6 caracteres"></div>
       <div class="field"><label>Nível de acesso</label>
         <select id="new-user-nivel">
           <option value="OPERADOR">🟢 Operador — apenas Saída e Estoque</option>
@@ -1493,8 +1491,9 @@ function renderUsuarios() {
           <div class="user-level">${nivelLabel(ud.nivel||'OPERADOR')} <span style="font-size:11px;color:var(--muted)">${ud.email||''}</span> ${ativo?'':'<span class="badge b-red" style="font-size:9px">INATIVO</span>'}</div>
         </div>
         <div class="user-actions">
-          ${!isMe?`<button class="btn btn-ghost btn-sm" onclick="toggleAtivoUsuario('${uid}',${ativo},'${ud.email||''}',${ativo})">${ativo?'🚫':'✅'}</button>`:''}
+          ${!isMe?`<button class="btn btn-ghost btn-sm" onclick="toggleAtivoUsuario('${uid}',${ativo},'${ud.email||''}')">${ativo?'🚫':'✅'}</button>`:''}
           <button class="btn btn-ghost btn-sm" onclick="abrirTrocarSenha('${uid}','${ud.email||''}')">🔑</button>
+          ${!isMe?`<button class="btn btn-sm" style="background:var(--red-dim);border:1px solid rgba(224,82,82,.3);color:var(--red)" onclick="confirmarApagarUsuario('${uid}','${ud.nome||ud.email||uid}')">🗑️</button>`:''}
         </div>
       </div>`;
     });
@@ -1580,6 +1579,38 @@ function salvarSenhaAdmin() {
     document.getElementById('passwd-modal').classList.remove('open');
     db.ref('auditoria/usuarios').push({acao:'reset_senha',email:passwdTargetUid.email,feito_por:currentUser?currentUser.email:'',ts:Date.now()});
   }).catch(err=>{ secApp.delete().catch(()=>{}); toast('Erro: '+err.code,'err'); });
+}
+
+// ══════════════════════════════════════════════════════════
+// APAGAR USUÁRIO
+// ══════════════════════════════════════════════════════════
+function confirmarApagarUsuario(uid, nome) {
+  if (!podeAcessar('ADMIN')) { toast('Acesso negado.', 'err'); return; }
+  if (currentUser && uid === currentUser.uid) { toast('Não pode apagar a si mesmo.', 'err'); return; }
+
+  // Reutiliza o confirm-modal
+  document.getElementById('confirm-nome').textContent = nome;
+  document.getElementById('confirm-det').textContent  = 'Esta ação removerá o acesso permanentemente.';
+  document.getElementById('confirm-msg').textContent  = '⚠️ O usuário não conseguirá mais entrar no sistema. Os logs de movimentação serão mantidos.';
+  document.getElementById('confirm-modal').classList.add('open');
+
+  confirmCallback = () => apagarUsuario(uid, nome);
+}
+
+function apagarUsuario(uid, nome) {
+  // Remove o perfil do Realtime Database
+  // (o registro no Firebase Auth permanece inativo — não temos Admin SDK no client)
+  db.ref('config/usuarios/' + uid).remove()
+    .then(() => {
+      toast('🗑️ Usuário removido: ' + nome);
+      renderUsuarios();
+      db.ref('auditoria/usuarios').push({
+        acao: 'apagar', uid, nome,
+        feito_por: currentUser ? currentUser.email : '',
+        ts: Date.now()
+      });
+    })
+    .catch(err => toast('Erro ao apagar: ' + err.code, 'err'));
 }
 
 </script>
