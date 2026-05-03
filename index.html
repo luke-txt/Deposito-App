@@ -310,6 +310,7 @@ body.modo-operador #sai-data-field{display:none!important}
 <div id="auth-loading">
   <div class="spinner"></div>
   <div class="auth-loading-txt">Verificando sessão...</div>
+  <div id="debug-log" style="margin-top:20px;font-size:11px;color:#5a6e58;font-family:monospace;text-align:center;max-width:300px;line-height:1.8"></div>
 </div>
 
 <div id="login-screen" style="display:none">
@@ -888,7 +889,34 @@ document.addEventListener('DOMContentLoaded', () => {
 // ══════════════════════════════════════════════════════════
 // FIREBASE AUTH — observer (único ponto de entrada)
 // ══════════════════════════════════════════════════════════
+// Debug log visível na tela
+function dbg(msg) {
+  console.log('[Auth]', msg);
+  const el = document.getElementById('debug-log');
+  if (el) el.innerHTML += msg + '<br>';
+}
+
+dbg('Iniciando...');
+
+// Verifica se Firebase carregou
+if (typeof firebase === 'undefined') { dbg('❌ Firebase não carregou!'); }
+else { dbg('✅ Firebase OK'); }
+if (typeof firebase !== 'undefined' && typeof firebase.auth === 'undefined') { dbg('❌ firebase-auth não carregou!'); }
+else { dbg('✅ Auth SDK OK'); }
+
+// Timeout de segurança
+const authTimeout = setTimeout(() => {
+  const loading = document.getElementById('auth-loading');
+  if (loading && loading.style.display !== 'none') {
+    dbg('⏰ Timeout — mostrando login');
+    loading.style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+}, 8000);
+
 auth.onAuthStateChanged(async firebaseUser => {
+  clearTimeout(authTimeout);
+  dbg('onAuthStateChanged: ' + (firebaseUser ? '✅ logado' : '🔓 não logado'));
   const loading = document.getElementById('auth-loading');
   const loginScreen = document.getElementById('login-screen');
 
@@ -1553,13 +1581,13 @@ function exportarEstoqueCSV() {
 }
 
 function baixarCSV(rows,filename) {
-  const BOM='﻿', csv=BOM+rows.map(r=>r.map(cel=>`"${String(cel).replace(/"/g,'""')}"`).join(';')).join('
-');
+  const BOM='\uFEFF';
+  const csv=BOM+rows.map(r=>r.map(cel=>'"'+String(cel).replace(/"/g,'""')+'"').join(';')).join('\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=filename; a.click();
   URL.revokeObjectURL(url);
-  toast('📥 Exportado!');
+  toast('\u{1F4E5} Exportado!');
 }
 
 function xlsxHeaderStyle(){
