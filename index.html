@@ -703,7 +703,8 @@ const auth = firebase.auth();
 
 // App Check — só bloqueia requisições sem token válido do reCAPTCHA
 // O token é gerado automaticamente pelo Google no domínio autorizado
-firebase.appCheck().activate(
+const appCheck = firebase.appCheck();
+appCheck.activate(
   new firebase.appCheck.ReCaptchaV3Provider('6Lc81NcsAAAAANKyCFJ-QrBnv-kBN0wlMa8E4dkw'),
   true
 );
@@ -904,17 +905,22 @@ document.addEventListener('DOMContentLoaded', () => {
 // ══════════════════════════════════════════════════════════
 // FIREBASE AUTH — observer (único ponto de entrada)
 // ══════════════════════════════════════════════════════════
-// Timeout de segurança — se Firebase não responder em 8s, mostra login
+// Timeout de segurança — se Firebase não responder em 10s, mostra login
 const authTimeout = setTimeout(() => {
   const loading = document.getElementById('auth-loading');
   if (loading && loading.style.display !== 'none') {
     loading.style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
   }
-}, 8000);
+}, 10000);
 
 // Flag para processar o observer só uma vez
 let authResolved = false;
+
+// Aguarda token do App Check antes de iniciar o observer de auth
+appCheck.getToken(true)
+  .catch(() => {}) // Se falhar, continua mesmo assim
+  .finally(() => {
 
 auth.onAuthStateChanged(async firebaseUser => {
   // Ignora disparos do secondary app (criarUsuario/resetSenha)
@@ -989,6 +995,7 @@ auth.onAuthStateChanged(async firebaseUser => {
     mostrarErroLogin('Erro ao verificar perfil: '+err.message);
   }
 });
+}); // fim appCheck.getToken
 
 // ══════════════════════════════════════════════════════════
 // LOGIN
