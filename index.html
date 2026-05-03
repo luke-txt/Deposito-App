@@ -272,6 +272,17 @@ tr:hover td{background:rgba(201,168,76,.04)}
 #theme-btn:hover{transform:scale(1.1);box-shadow:0 6px 24px rgba(201,168,76,.2)}
 .empty{text-align:center;padding:30px 20px;color:var(--muted);font-size:13px}
 #btn-nav-logout:hover{background:var(--red-dim)}
+
+/* RECIBO */
+.recibo-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.recibo-row:last-child{border-bottom:none}
+.recibo-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+.recibo-val{font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace}
+
+/* OPERADOR — tela limpa */
+body.modo-operador .nav-item:not([data-tab="saida"]):not(#btn-nav-logout){display:none!important}
+body.modo-operador .nav-logo{display:none}
+body.modo-operador #sai-data-field{display:none!important}
 .divider{height:1px;background:var(--border);margin:16px 0}
 .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
@@ -410,7 +421,10 @@ tr:hover td{background:rgba(201,168,76,.04)}
   <div id="page-saida" class="page">
     <div class="page-header">
       <div class="page-header-ico ico-red">📤</div>
-      <div><div class="page-header-title">Registrar Saída</div><div class="page-header-sub">Baixe um produto do estoque</div></div>
+      <div>
+        <div class="page-header-title">Registrar Saída</div>
+        <div class="page-header-sub" id="sai-data-label"></div>
+      </div>
     </div>
     <div class="qr-wrap" id="qr-wrap-saida"><div id="qr-reader-saida"></div></div>
     <div class="qr-toggle" id="qr-toggle-saida">📷 <span>Usar câmera / QR Code</span></div>
@@ -433,12 +447,27 @@ tr:hover td{background:rgba(201,168,76,.04)}
         </div>
       </div>
       <input type="hidden" id="sai-code">
-      <div class="row-2">
-        <div class="field"><label>Quantidade</label><input type="number" id="sai-qtd" value="1" min="0.001" step="any"></div>
-        <div class="field"><label>Data <span style="color:var(--muted);font-weight:400">(vazio=hoje)</span></label><input type="date" id="sai-data"></div>
+      <input type="hidden" id="sai-data">
+      <div class="field"><label>Quantidade</label><input type="number" id="sai-qtd" value="1" min="0.001" step="any"></div>
+      <div class="field">
+        <label>Finalidade <span id="sai-obs-required" style="color:var(--red)">*</span></label>
+        <textarea id="sai-obs" placeholder="Ex: Almoço, Jantar, Evento..."></textarea>
       </div>
-      <div class="field"><label>Finalidade / Observação <span style="color:var(--muted);font-weight:400">(opcional)</span></label><textarea id="sai-obs" placeholder="Ex: Almoço, Jantar, Evento..."></textarea></div>
+      <!-- Campo de data visível apenas para Admin/Supervisor -->
+      <div class="field level-supervisor-field" id="sai-data-field" style="display:none">
+        <label>Data <span style="color:var(--muted);font-weight:400">(vazio = hoje)</span></label>
+        <input type="date" id="sai-data-manual">
+      </div>
       <button class="btn btn-red" id="btn-saida">✓ CONFIRMAR SAÍDA</button>
+    </div>
+
+    <!-- RECIBO pós-saída (visível só para Operador) -->
+    <div id="recibo-box" style="display:none">
+      <div class="card accent-green">
+        <div class="card-title">✅ Saída registrada</div>
+        <div id="recibo-content"></div>
+        <button class="btn btn-ghost" style="margin-top:12px" onclick="fecharRecibo()">Nova saída</button>
+      </div>
     </div>
   </div>
 
@@ -908,7 +937,7 @@ auth.onAuthStateChanged(async firebaseUser => {
 
     aplicarNivel();
     carregarCache();
-    switchTab('dashboard');
+    switchTab(userLevel === 'OPERADOR' ? 'saida' : 'dashboard');
 
   } catch(err) {
     console.error('Auth state error:', err);
@@ -977,6 +1006,24 @@ function aplicarNivel() {
   document.querySelectorAll('.level-admin').forEach(el=>{
     el.style.display = podeAcessar('ADMIN') ? '' : 'none';
   });
+
+  if (userLevel === 'OPERADOR') {
+    // Modo operador — nav limpa, só Saída
+    document.body.classList.add('modo-operador');
+    // Esconde todos os nav items exceto Saída e Logout
+    document.querySelectorAll('.nav-item[data-tab]').forEach(el => {
+      el.style.display = el.dataset.tab === 'saida' ? '' : 'none';
+    });
+    document.querySelector('.nav-logo').style.display = 'none';
+  } else {
+    document.body.classList.remove('modo-operador');
+    // Supervisor vê campo de data manual na saída
+    const dataField = document.getElementById('sai-data-field');
+    if (dataField) dataField.style.display = '';
+    // Observação não obrigatória para supervisor/admin
+    const obsRequired = document.getElementById('sai-obs-required');
+    if (obsRequired) obsRequired.style.display = 'none';
+  }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1023,6 +1070,10 @@ function atualizarBadgeNav() {
 // NAVEGAÇÃO
 // ══════════════════════════════════════════════════════════
 async function switchTab(tab) {
+  // Operador só pode acessar saida
+  if (userLevel === 'OPERADOR' && tab !== 'saida') {
+    toast('Acesso não autorizado.','err'); return;
+  }
   const permMap = { entrada:'SUPERVISOR', diario:'SUPERVISOR', relatorio:'ADMIN', usuarios:'ADMIN' };
   if (permMap[tab] && !podeAcessar(permMap[tab])) { toast('Acesso não autorizado.','err'); return; }
 
@@ -1045,6 +1096,16 @@ async function switchTab(tab) {
   if(tab==='diario')    { document.getElementById('data-diario').value=dataLocal(); renderDiario(); }
   if(tab==='relatorio') renderRelatorio();
   if(tab==='usuarios')  renderUsuarios();
+  if(tab==='saida') {
+    // Atualiza label com data atual
+    const labelEl = document.getElementById('sai-data-label');
+    if (labelEl) {
+      const hoje = new Date();
+      labelEl.textContent = hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    }
+    // Esconde recibo ao abrir a aba
+    fecharRecibo();
+  }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1228,23 +1289,41 @@ function processar(tipo) {
 function processarSaida() {
   const qtd=parseFloat(document.getElementById('sai-qtd').value.replace(',','.'));
   if(isNaN(qtd)||qtd<=0){ toast('Quantidade inválida.','err'); return; }
+
   let code=document.getElementById('sai-code').value.trim();
   if(!code){
     const busca=document.getElementById('sai-busca').value.trim().toLowerCase();
     const found=Object.entries(cache).find(([k,v])=>k.toLowerCase()===busca||(v.nome&&v.nome.toLowerCase()===busca));
     if(found){ code=found[0]; } else { toast('Selecione um produto da lista.','err'); if(busca&&cacheReady)buildAcList(busca); return; }
   }
+
   const item=cache[code];
   if(!item){ toast('Produto não encontrado.','err'); return; }
   if(item.saldo<qtd){ toast('Saldo insuficiente! Há apenas '+item.saldo+' '+item.unidade+'.','err'); return; }
-  const dataManual=document.getElementById('sai-data').value;
+
   const obs=document.getElementById('sai-obs').value.trim();
-  // Abre confirmação
+
+  // Obs obrigatória para OPERADOR
+  if(userLevel==='OPERADOR' && !obs){
+    toast('Informe a finalidade da retirada.','err');
+    document.getElementById('sai-obs').focus();
+    return;
+  }
+
+  // Data: operador sempre usa hoje; supervisor/admin pode usar campo manual
+  let dataManual = null;
+  if(podeAcessar('SUPERVISOR')){
+    const manualField = document.getElementById('sai-data-manual');
+    dataManual = manualField ? manualField.value : null;
+  }
+
+  // Confirmação
   document.getElementById('confirm-nome').textContent=item.nome;
-  document.getElementById('confirm-det').textContent=`${qtd} ${item.unidade} · Saldo atual: ${item.saldo} ${item.unidade}`;
-  document.getElementById('confirm-msg').textContent=obs?`Finalidade: "${obs}"`:'Confirme a saída deste produto.';
+  document.getElementById('confirm-det').textContent=qtd+' '+item.unidade+' · Saldo: '+item.saldo+' '+item.unidade;
+  document.getElementById('confirm-msg').textContent=obs?'Finalidade: "'+obs+'"':'Confirme a saída deste produto.';
   document.getElementById('confirm-modal').classList.add('open');
-  confirmCallback=()=>gravarMovimento('SAIDA',code,null,qtd,dataManual,obs);
+
+  confirmCallback=()=>gravarMovimento('SAIDA',code,null,qtd,dataManual,obs,item);
 }
 
 function fecharConfirm(){ document.getElementById('confirm-modal').classList.remove('open'); confirmCallback=null; }
@@ -1252,7 +1331,7 @@ function fecharConfirm(){ document.getElementById('confirm-modal').classList.rem
 // ══════════════════════════════════════════════════════════
 // GRAVAR MOVIMENTO
 // ══════════════════════════════════════════════════════════
-function gravarMovimento(tipo,code,dadosEntrada,qtd,dataManual=null,obs='') {
+function gravarMovimento(tipo,code,dadosEntrada,qtd,dataManual=null,obs='',itemRef=null) {
   if(!code||typeof code!=='string'||code.length>100){ toast('Código inválido.','err'); return; }
   db.ref('estoque/'+code).once('value').then(snap=>{
     const atual=snap.val();
@@ -1282,13 +1361,18 @@ function gravarMovimento(tipo,code,dadosEntrada,qtd,dataManual=null,obs='') {
     db.ref().update(updates).then(()=>{
       toast(tipo==='ENTRADA'?'✅ Entrada registrada!':'✅ Saída registrada!');
       if(tipo==='SAIDA'&&novosDados.minimo>0&&novoSaldo<novosDados.minimo)
-        setTimeout(()=>toast(`⚠️ ${novosDados.nome} abaixo do mínimo!`,'warn'),600);
+        setTimeout(()=>toast('⚠️ '+novosDados.nome+' abaixo do mínimo!','warn'),600);
       if(tipo==='ENTRADA'){
         ['ent-code','ent-nome','ent-val','ent-obs'].forEach(id=>document.getElementById(id).value='');
         document.getElementById('ent-qtd').value=1; document.getElementById('ent-unidade').value='un'; document.getElementById('ent-minimo').value=0;
       } else {
-        ['sai-code','sai-busca','sai-data','sai-obs'].forEach(id=>document.getElementById(id).value='');
-        document.getElementById('sai-qtd').value=1; document.getElementById('sai-preview-box').style.display='none';
+        ['sai-code','sai-busca','sai-obs'].forEach(id=>document.getElementById(id).value='');
+        const saiDataManual = document.getElementById('sai-data-manual');
+        if(saiDataManual) saiDataManual.value='';
+        document.getElementById('sai-qtd').value=1;
+        document.getElementById('sai-preview-box').style.display='none';
+        // Recibo para operador
+        if(userLevel==='OPERADOR') mostrarRecibo(novosDados.nome, qtd, novosDados.unidade, obs, novoSaldo);
       }
       if(document.getElementById('page-dashboard').classList.contains('active')) renderDashboard();
     }).catch(err=>{ console.error(err); toast('Erro: '+(err.code||err.message),'err'); });
@@ -1649,6 +1733,48 @@ function apagarUsuario(uid, nome) {
 function instrucaoRecriarUsuario(email) {
   toast('Para reusar este email: apague em Firebase Console → Authentication → Users', 'warn');
   console.info('Recriar usuário: Firebase Console → Authentication → Users → delete ' + email);
+}
+
+// ══════════════════════════════════════════════════════════
+// RECIBO (Operador)
+// ══════════════════════════════════════════════════════════
+function mostrarRecibo(nome, qtd, unidade, obs, novoSaldo) {
+  const hora = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const data = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
+  document.getElementById('recibo-content').innerHTML = `
+    <div class="recibo-row">
+      <span class="recibo-label">Produto</span>
+      <span class="recibo-val">${nome}</span>
+    </div>
+    <div class="recibo-row">
+      <span class="recibo-label">Quantidade</span>
+      <span class="recibo-val" style="color:var(--red)">-${qtd} ${unidade}</span>
+    </div>
+    <div class="recibo-row">
+      <span class="recibo-label">Finalidade</span>
+      <span class="recibo-val" style="font-size:13px">${obs}</span>
+    </div>
+    <div class="recibo-row">
+      <span class="recibo-label">Saldo restante</span>
+      <span class="recibo-val" style="color:${novoSaldo>0?'var(--green)':'var(--red)'}">${novoSaldo} ${unidade}</span>
+    </div>
+    <div class="recibo-row">
+      <span class="recibo-label">Horário</span>
+      <span class="recibo-val" style="font-size:13px">${data} · ${hora}</span>
+    </div>`;
+  document.getElementById('recibo-box').style.display = 'block';
+  // Esconde o formulário
+  document.querySelector('#page-saida .card.accent-red').style.display = 'none';
+  document.querySelector('#page-saida .qr-toggle').style.display = 'none';
+  document.getElementById('qr-wrap-saida').style.display = 'none';
+}
+
+function fecharRecibo() {
+  document.getElementById('recibo-box').style.display = 'none';
+  const card = document.querySelector('#page-saida .card.accent-red');
+  const toggle = document.querySelector('#page-saida .qr-toggle');
+  if(card) card.style.display = '';
+  if(toggle) toggle.style.display = '';
 }
 
 </script>
