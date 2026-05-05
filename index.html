@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#121812">
+<title>Depósito Aprov</title>
+<link rel="icon" href="assets/intendencia2.png" type="image/png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/intendencia2.png">
+<link rel="apple-touch-icon-precomposed" href="assets/intendencia2.png">
+<link rel="shortcut icon" href="assets/intendencia2.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Depósito Aprov">
+<meta name="application-name" content="Depósito Aprov">
+
+<!-- Fontes -->
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-check-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<!-- Libs externas -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- CSS -->
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<!-- AUTH LOADING SPINNER (shown while Firebase checks auth state) -->
+<div id="auth-loading">
+  <div class="spinner"></div>
+  <div class="auth-loading-txt">Verificando sessão...</div>
+</div>
+
+<div id="login-screen" style="display:none">
+  <div class="login-box">
+    <img src="assets/intendencia.png" alt="Logo" class="login-logo-img">
+    <h2>Depósito Aprov</h2>
+    <p>Sistema de Controle de Estoque</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="inp-email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-gold" id="btn-login" style="margin-top:4px">ENTRAR</button>
+    <div id="login-error">Email ou senha incorretos.</div>
+    <div class="forgot-link" id="btn-forgot">Esqueci minha senha →</div>
+    <div id="reset-panel">
+      <p>Solicite ao <b>Administrador</b> que redefina sua senha pelo painel de Usuários.</p>
+      <p style="margin-top:6px">Admin: <span style="color:var(--gold)">lucasbcavalcante4@gmail.com</span></p>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="nav" id="main-nav">
+  <div class="nav-logo"><img src="assets/intendencia2.png" alt="logo"></div>
+  <div class="nav-item" data-tab="dashboard">🏠 Início</div>
+  <div class="nav-item level-entrada" data-tab="entrada">📥 Entrada</div>
+  <div class="nav-item" data-tab="saida">📤 Saída</div>
+  <div class="nav-item" data-tab="estoque">🗂️ Estoque<span class="nav-badge" id="nav-badge-estoque"></span></div>
+  <div class="nav-item level-admin" data-tab="diario">📋 Diário</div>
+  <div class="nav-item level-admin" data-tab="relatorio">📊 Relatórios</div>
+  <div class="nav-item level-admin" data-tab="usuarios">👥 Usuários</div>
+
+  <div class="nav-item" id="btn-nav-logout" style="margin-left:auto;color:var(--red)" title="Sair">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sair
+  </div>
+</nav>
+
+<div class="container" id="app" style="display:none">
+
+  <!-- ══════ DASHBOARD ══════ -->
+  <div id="page-dashboard" class="page">
+    <div class="page-header">
+      <div class="page-header-ico ico-gold">🏠</div>
+      <div><div class="page-header-title" id="dash-greeting">Bom dia!</div><div class="page-header-sub" id="dash-user-label"></div></div>
+    </div>
+    <!-- Alertas críticos -->
+    <div class="dash-alert" id="dash-alert">
+      <div class="dash-alert-title">🚨 Itens vencidos / vencendo em 7 dias</div>
+      <div id="dash-alert-list"></div>
+    </div>
+    <!-- Estoque baixo -->
+    <div class="dash-low" id="dash-low">
+      <div class="dash-low-title">⚠️ Estoque abaixo do mínimo</div>
+      <div id="dash-low-list"></div>
+    </div>
+    <!-- Métricas -->
+    <div class="dash-grid" id="dash-metrics"></div>
+    <!-- Últimas movimentações -->
+    <div class="card">
+      <div class="card-title">Últimas movimentações hoje</div>
+      <div id="dash-recent"></div>
+    </div>
+  </div>
+
+  <!-- ══════ ENTRADA ══════ -->
+  <div id="page-entrada" class="page">
+    <div class="page-header">
+      <div class="page-header-ico ico-green">📥</div>
+      <div><div class="page-header-title">Entrada de Item</div><div class="page-header-sub">Registre a chegada de um produto</div></div>
+    </div>
+    <div class="qr-wrap" id="qr-wrap-entrada"><div id="qr-reader-entrada"></div></div>
+    <div class="qr-toggle" id="qr-toggle-entrada">📷 <span>Usar câmera / QR Code</span></div>
+    <div class="card accent-green">
+      <div class="card-title">Dados do produto</div>
+      <div class="field"><label>Código de barras</label><input type="text" id="ent-code" placeholder="Ex: 7891000100103"></div>
+      <div class="field"><label>Nome / Marca</label><input type="text" id="ent-nome" placeholder="Ex: Leite Integral 1L"></div>
+      <div class="field"><label>Validade</label><input type="date" id="ent-val"></div>
+      <div class="field"><label>Setor</label>
+        <select id="ent-setor">
+          <option value="SECO">📦 Secos</option>
+          <option value="FRIGORIFICO">🥩 Frigorífico</option>
+        </select>
+      </div>
+      <div class="row-2">
+        <div class="field"><label>Unidade</label>
+          <select id="ent-unidade">
+            <option value="un">Unidade (un)</option>
+            <option value="kg">Quilograma (kg)</option>
+            <option value="g">Gramas (g)</option>
+            <option value="L">Litro (L)</option>
+            <option value="ml">Mililitro (ml)</option>
+            <option value="lata">Lata</option>
+            <option value="cx">Caixa (cx)</option>
+            <option value="pct">Pacote (pct)</option>
+          </select>
+        </div>
+        <div class="field"><label>Quantidade</label><input type="number" id="ent-qtd" value="1" min="0.001" step="any"></div>
+      </div>
+      <div class="field"><label>Estoque mínimo <span style="color:var(--muted);font-weight:400">(alerta abaixo desse valor)</span></label><input type="number" id="ent-minimo" value="0" min="0" step="any" placeholder="0 = sem alerta"></div>
+      <div class="field"><label>Observação <span style="color:var(--muted);font-weight:400">(opcional)</span></label><textarea id="ent-obs" placeholder="Ex: Nota fiscal 1234, fornecedor X..."></textarea></div>
+      <button class="btn btn-green" id="btn-entrada">✓ CONFIRMAR ENTRADA</button>
+    </div>
+  </div>
+
+  <!-- ══════ SAÍDA ══════ -->
+  <div id="page-saida" class="page">
+    <div class="page-header">
+      <div class="page-header-ico ico-red">📤</div>
+      <div>
+        <div class="page-header-title">Registrar Saída</div>
+        <div class="page-header-sub" id="sai-data-label"></div>
+      </div>
+    </div>
+    <div class="qr-wrap" id="qr-wrap-saida"><div id="qr-reader-saida"></div></div>
+    <div class="qr-toggle" id="qr-toggle-saida">📷 <span>Usar câmera / QR Code</span></div>
+    <div class="card accent-red">
+      <div class="card-title">Selecionar produto</div>
+      <div class="field">
+        <label>Buscar por nome ou código</label>
+        <div class="ac-wrap">
+          <input type="text" id="sai-busca" placeholder="Digite para buscar..." autocomplete="off">
+          <div class="ac-list" id="ac-list"></div>
+        </div>
+      </div>
+      <div id="sai-preview-box">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.8px">Produto selecionado</div>
+        <div id="prev-nome" style="font-weight:700;font-size:14px;margin-bottom:8px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span id="prev-saldo" class="badge b-green"></span>
+          <span id="prev-val" class="badge b-gray"></span>
+          <span id="prev-min" class="badge b-gray" style="display:none"></span>
+        </div>
+      </div>
+      <input type="hidden" id="sai-code">
+      <input type="hidden" id="sai-data">
+      <div class="field"><label>Quantidade</label><input type="number" id="sai-qtd" value="1" min="0.001" step="any"></div>
+      <div class="field">
+        <label>Finalidade <span id="sai-obs-required" style="color:var(--red)">*</span></label>
+        <textarea id="sai-obs" placeholder="Ex: Almoço, Jantar, Evento..."></textarea>
+      </div>
+      <!-- Campo de data visível apenas para Admin/Supervisor -->
+      <div class="field level-supervisor-field" id="sai-data-field" style="display:none">
+        <label>Data <span style="color:var(--muted);font-weight:400">(vazio = hoje)</span></label>
+        <input type="date" id="sai-data-manual">
+      </div>
+      <button class="btn btn-red" id="btn-saida">✓ CONFIRMAR SAÍDA</button>
+    </div>
+
+    <!-- RECIBO pós-saída (visível só para Operador) -->
+    <div id="recibo-box" style="display:none">
+      <div class="card accent-green">
+        <div class="card-title">✅ Saída registrada</div>
+        <div id="recibo-content"></div>
+        <button class="btn btn-ghost" style="margin-top:12px" onclick="fecharRecibo()">Nova saída</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ ESTOQUE ══════ -->
+  <div id="page-estoque" class="page">
+    <div class="page-header">
+      <div class="page-header-ico ico-gold">🗂️</div>
+      <div>
+        <div class="page-header-title">Estoque</div>
+        <div class="page-header-sub">Visualize e gerencie os itens</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto" id="btn-export-csv">⬇ CSV</button>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="filtro-estoque" placeholder="Pesquisar produto...">
+    </div>
+    <div id="soma-bar">
+      <div><div class="s-label">Total encontrado</div><div class="s-sub" id="soma-sub"></div></div>
+      <div class="s-val" id="soma-val"></div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" data-estoque-tab="lista">📋 Itens</button>
+      <button class="tab-btn" data-estoque-tab="vencimentos">⏰ Vencimentos</button>
+      <button class="tab-btn" data-estoque-tab="minimo">📉 Estoque Baixo</button>
+      <button class="tab-btn" data-estoque-tab="codigos">🏷️ Códigos</button>
+    </div>
+    <div id="tab-lista">
+      <div class="section-label">🥩 Frigorífico</div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table><thead><tr><th>Item</th><th style="text-align:center">Qtd</th><th>Validade</th></tr></thead>
+        <tbody id="tbody-frigo"></tbody></table>
+      </div>
+      <div class="section-label">📦 Secos</div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table><thead><tr><th>Item</th><th style="text-align:center">Qtd</th><th>Validade</th></tr></thead>
+        <tbody id="tbody-secos"></tbody></table>
+      </div>
+    </div>
+    <div id="tab-vencimentos" style="display:none">
+      <div class="section-label" style="color:var(--red)">🚨 Vencidos / até 7 dias</div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table><thead><tr><th>Item</th><th>Setor</th><th>Validade</th><th style="text-align:center">Qtd</th></tr></thead>
+        <tbody id="tbody-venc-crit"></tbody></table>
+      </div>
+      <div class="section-label" style="color:var(--amber)">⚠️ 8 a 30 dias</div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table><thead><tr><th>Item</th><th>Setor</th><th>Validade</th><th style="text-align:center">Qtd</th></tr></thead>
+        <tbody id="tbody-venc-aviso"></tbody></table>
+      </div>
+    </div>
+    <div id="tab-minimo" style="display:none">
+      <div class="card" style="padding:0;overflow:hidden">
+        <table><thead><tr><th>Item</th><th style="text-align:center">Atual</th><th style="text-align:center">Mínimo</th><th style="text-align:center">Status</th></tr></thead>
+        <tbody id="tbody-minimo"></tbody></table>
+      </div>
+    </div>
+    <div id="tab-codigos" style="display:none">
+      <div class="bc-grid" id="bc-grid"></div>
+    </div>
+  </div>
+
+  <!-- ══════ DIÁRIO ══════ -->
+  <div id="page-diario" class="page">
+    <div class="page-header">
+      <div class="page-header-ico ico-blue">📋</div>
+      <div><div class="page-header-title">Diário</div><div class="page-header-sub">Movimentações por data</div></div>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn btn-ghost btn-sm level-admin" id="btn-export-completo" title="XLSX com todas as datas">📦 Backup</button>
+        <button class="btn btn-ghost btn-sm" id="btn-export-diario">⬇ XLSX</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="field"><label>Data</label><input type="date" id="data-diario"></div>
+      <div style="display:flex;gap:10px;margin-top:4px" id="diario-totais"></div>
+    </div>
+    <div id="lista-diario"></div>
+  </div>
+
+  <!-- ══════ RELATÓRIOS ══════ -->
+  <div id="page-relatorio" class="page">
+    <div class="page-header">
+      <div class="page-header-ico ico-gold">📊</div>
+      <div><div class="page-header-title">Relatórios</div><div class="page-header-sub">Métricas e rankings</div></div>
+    </div>
+    <div class="stats-grid" id="rel-stats"></div>
+    <div class="period-tabs">
+      <button class="pt active" data-period="semana">7 dias</button>
+      <button class="pt" data-period="mes">30 dias</button>
+      <button class="pt" data-period="tudo">Tudo</button>
+    </div>
+    <div class="card"><div class="card-title">Mais retirados</div><div id="rank-saidas"></div></div>
+    <div class="card"><div class="card-title">Mais recebidos</div><div id="rank-entradas"></div></div>
+  </div>
+
+  <!-- ══════ USUÁRIOS ══════ -->
+  <div id="page-usuarios" class="page">
+    <div class="page-header">
+      <div class="page-header-ico ico-blue">👥</div>
+      <div><div class="page-header-title">Usuários</div><div class="page-header-sub">Gerencie o acesso ao sistema</div></div>
+    </div>
+    <div class="card accent-blue">
+      <div class="card-title">Novo usuário</div>
+      <div class="field"><label>Nome completo</label><input type="text" id="new-user-nome" placeholder="Ex: João Silva" autocomplete="off"></div>
+      <div class="field"><label>Email</label><input type="email" id="new-user-login" placeholder="email@exemplo.com" autocomplete="off"></div>
+      <div class="field"><label>Senha inicial</label><input type="password" id="new-user-pass" placeholder="Mínimo 6 caracteres"></div>
+      <div class="field"><label>Nível de acesso</label>
+        <select id="new-user-nivel">
+          <option value="OPERADOR">🟢 Operador — apenas Saída e Estoque</option>
+          <option value="SUPERVISOR">🟡 Supervisor — Entrada, Saída, Estoque e Diário</option>
+          <option value="ADMIN">🔴 Admin — acesso total</option>
+        </select>
+      </div>
+      <button class="btn btn-blue btn-sm" id="btn-criar-usuario" style="width:auto;padding:10px 24px">+ CRIAR USUÁRIO</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+        <div class="card-title" style="margin-bottom:0">Usuários cadastrados</div>
+      </div>
+      <div id="lista-usuarios" style="padding:0 16px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PRODUTO -->
+<div class="modal-bg" id="edit-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title">✏️ Editar produto</div>
+      <button class="modal-close" id="btn-modal-close">✕</button>
+    </div>
+    <div class="modal-code" id="edit-code-label"></div>
+    <div class="field"><label>Nome / Marca</label><input type="text" id="edit-nome"></div>
+    <div class="field"><label>Validade</label><input type="date" id="edit-val"></div>
+    <div class="field"><label>Setor</label>
+      <select id="edit-setor">
+        <option value="SECO">📦 Secos</option>
+        <option value="FRIGORIFICO">🥩 Frigorífico</option>
+      </select>
+    </div>
+    <div class="row-2">
+      <div class="field"><label>Unidade</label>
+        <select id="edit-unidade">
+          <option value="un">Unidade (un)</option>
+          <option value="kg">Quilograma (kg)</option>
+          <option value="g">Gramas (g)</option>
+          <option value="L">Litro (L)</option>
+          <option value="ml">Mililitro (ml)</option>
+          <option value="lata">Lata</option>
+          <option value="cx">Caixa (cx)</option>
+          <option value="pct">Pacote (pct)</option>
+        </select>
+      </div>
+      <div class="field"><label>Quantidade</label><input type="number" id="edit-saldo" min="0" step="any"></div>
+    </div>
+    <div class="field"><label>Estoque mínimo</label><input type="number" id="edit-minimo" min="0" step="any" placeholder="0 = sem alerta"></div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" id="btn-modal-cancel">CANCELAR</button>
+      <button class="btn btn-gold" style="flex:2" id="btn-modal-save">SALVAR</button>
+    </div>
+    <div class="divider"></div>
+    <button class="btn btn-ghost btn-sm" id="btn-ver-historico" style="width:100%">📜 Ver histórico deste produto</button>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR SAÍDA -->
+<div class="modal-bg" id="confirm-modal" style="align-items:center">
+  <div class="modal-box" style="border-radius:20px;max-width:380px;padding:28px 24px 32px">
+    <div class="modal-head" style="margin-top:0">
+      <div class="modal-title">⚠️ Confirmar saída</div>
+      <button class="modal-close" id="btn-confirm-close">✕</button>
+    </div>
+    <div class="confirm-product">
+      <div class="cp-nome" id="confirm-nome"></div>
+      <div class="cp-det" id="confirm-det"></div>
+    </div>
+    <div class="confirm-msg" id="confirm-msg"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" id="btn-confirm-cancel">CANCELAR</button>
+      <button class="btn btn-red" style="flex:2" id="btn-confirm-ok">CONFIRMAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HISTÓRICO -->
+<div class="modal-bg" id="hist-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title" id="hist-title">📜 Histórico</div>
+      <button class="modal-close" id="btn-hist-close">✕</button>
+    </div>
+    <div id="hist-list"></div>
+  </div>
+</div>
+
+<!-- MODAL TROCAR SENHA -->
+<div class="modal-bg" id="passwd-modal" style="align-items:center">
+  <div class="modal-box" style="border-radius:20px;max-width:380px;padding:28px 24px 32px">
+    <div class="modal-head" style="margin-top:0">
+      <div class="modal-title">🔑 Alterar senha</div>
+      <button class="modal-close" id="btn-passwd-close">✕</button>
+    </div>
+    <div id="passwd-user-label" style="font-size:12px;color:var(--muted);margin-bottom:16px"></div>
+    <div class="field"><label>Nova senha</label><input type="password" id="passwd-new" placeholder="Mínimo 6 caracteres"></div>
+    <div class="field"><label>Confirmar senha</label><input type="password" id="passwd-confirm" placeholder="Repita a senha"></div>
+    <button class="btn btn-gold" id="btn-passwd-save">SALVAR NOVA SENHA</button>
+  </div>
+</div>
+
+<div id="theme-btn">🌙</div>
+<div id="toast"></div>
+
+
+
+
+<!-- JS — ordem importa: config e state primeiro, utils antes dos módulos -->
+<script src="js/config.js"></script>
+<script src="js/state.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/tema.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/cache.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/qr.js"></script>
+<script src="js/autocomplete.js"></script>
+<script src="js/entrada.js"></script>
+<script src="js/saida.js"></script>
+<script src="js/estoque.js"></script>
+<script src="js/modal_produto.js"></script>
+<script src="js/diario.js"></script>
+<script src="js/export.js"></script>
+<script src="js/relatorio.js"></script>
+<script src="js/usuarios.js"></script>
+<script src="js/events.js"></script>
+</body>
+</html>
