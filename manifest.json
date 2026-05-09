@@ -1,0 +1,30 @@
+{
+  "name": "Depósito Aprov",
+  "short_name": "Depósito",
+  "description": "Sistema de Controle de Estoque",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0e0b",
+  "theme_color": "#0b0e0b",
+  "icons": [
+    {
+      "src": "assets/intendencia2.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/intendencia2.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/intendencia2.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "lang": "pt-BR"
+}
