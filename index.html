@@ -4,44 +4,646 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#121812">
+<meta name="apple-mobile-web-app-title" content="Depósito Aprov">
+<meta name="application-name" content="Depósito Aprov">
+<meta name="theme-color" content="#0b0e0b">
 <title>Depósito Aprov</title>
 <link rel="icon" href="assets/intendencia2.png" type="image/png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/intendencia2.png">
 <link rel="apple-touch-icon-precomposed" href="assets/intendencia2.png">
 <link rel="shortcut icon" href="assets/intendencia2.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Depósito Aprov">
-<meta name="application-name" content="Depósito Aprov">
 
-<!-- Fontes -->
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- Fontes: Playfair Display (títulos) + DM Sans (corpo) + JetBrains Mono (números) -->
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-check-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
-<!-- Libs externas -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<!-- CSS -->
-<link rel="stylesheet" href="css/style.css">
-</head>
+<style>
+/* ═══════════════════════════════════════════════════════
+   TOKENS
+═══════════════════════════════════════════════════════ */
+:root {
+  --bg:#0b0e0b; --surface:#121812; --surface2:#1a201a; --surface3:#212921;
+  --border:#2c362c; --border2:#38473a;
+  --text:#e8eddf; --text2:#a8b8a0; --muted:#5a6e58;
+  --gold:#c9a84c; --gold-dim:rgba(201,168,76,.14); --gold-glow:rgba(201,168,76,.30);
+  --green:#4caf6e; --green-dim:rgba(76,175,110,.14);
+  --red:#e05252; --red-dim:rgba(224,82,82,.14);
+  --amber:#d4943a; --amber-dim:rgba(212,148,58,.14);
+  --blue:#5b8dee; --blue-dim:rgba(91,141,238,.14);
+  --nav-bottom:72px; --r:16px;
+  --card-grad:linear-gradient(145deg,#121812 0%,#141a14 100%);
+  --font-title:'Playfair Display',serif;
+  --font-body:'DM Sans',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+body.light {
+  --bg:#f0f2ee; --surface:#fff; --surface2:#eaf0e6; --surface3:#dde6d8;
+  --border:#c8d8c0; --border2:#b0c4a8;
+  --text:#1a2218; --text2:#3d5238; --muted:#7a9470;
+  --card-grad:linear-gradient(145deg,#fff,#f7faf5);
+}
 
+/* ═══════════════════════════════════════════════════════
+   BASE
+═══════════════════════════════════════════════════════ */
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  padding-bottom: var(--nav-bottom);
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+/* ═══════════════════════════════════════════════════════
+   AUTH LOADING
+═══════════════════════════════════════════════════════ */
+#auth-loading {
+  position:fixed; inset:0; z-index:9998;
+  background:var(--bg);
+  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px;
+}
+.spinner {
+  width:40px; height:40px;
+  border:3px solid var(--border2);
+  border-top-color:var(--gold);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.auth-loading-txt { font-size:13px; color:var(--muted); font-weight:600; }
+
+/* ═══════════════════════════════════════════════════════
+   LOGIN
+═══════════════════════════════════════════════════════ */
+#login-screen {
+  position:fixed; inset:0; z-index:9999;
+  background:var(--bg);
+  display:none; align-items:center; justify-content:center; padding:20px;
+}
+.login-box {
+  width:100%; max-width:360px;
+  background:var(--card-grad);
+  border:1px solid var(--border2);
+  border-radius:28px;
+  padding:44px 36px 36px;
+  text-align:center;
+  box-shadow:0 0 0 1px rgba(201,168,76,.08), 0 24px 60px rgba(0,0,0,.5);
+  position:relative; overflow:hidden;
+}
+.login-box::before {
+  content:''; position:absolute; top:0; left:10%; right:10%; height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+}
+.login-logo-img {
+  width:100px; height:auto; margin:0 auto 20px; display:block;
+  filter:drop-shadow(0 4px 14px rgba(201,168,76,.35));
+}
+.login-box h2 {
+  font-family:var(--font-title);
+  font-size:24px; font-weight:900; letter-spacing:.3px; margin-bottom:4px;
+}
+.login-box p { font-size:12px; color:var(--muted); margin-bottom:28px; }
+.login-box .field { text-align:left; margin-bottom:12px; }
+.login-box .field label {
+  display:block; font-size:10px; font-weight:700; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px;
+}
+#login-error { color:var(--red); font-size:12px; margin-top:10px; display:none; }
+.forgot-link {
+  font-size:12px; color:var(--muted); cursor:pointer; margin-top:10px;
+  display:inline-block; transition:color .2s;
+}
+.forgot-link:hover { color:var(--gold); }
+#reset-panel {
+  display:none; margin-top:14px; padding:12px 14px;
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:10px; text-align:left;
+}
+#reset-panel p { font-size:12px; color:var(--muted); line-height:1.6; }
+
+/* ═══════════════════════════════════════════════════════
+   NAV INFERIOR
+═══════════════════════════════════════════════════════ */
+.bottom-nav {
+  position:fixed; bottom:0; left:0; right:0;
+  height:var(--nav-bottom);
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  display:none;
+  z-index:1000;
+  padding-bottom:env(safe-area-inset-bottom);
+  box-shadow:0 -4px 30px rgba(0,0,0,.3);
+}
+.bottom-nav::before {
+  content:''; position:absolute; top:0; left:10%; right:10%; height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-glow),transparent);
+  opacity:.6;
+}
+.bottom-nav-inner {
+  display:flex; align-items:stretch;
+  height:100%; max-width:600px; margin:auto;
+}
+.bn-item {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:4px; cursor:pointer;
+  color:var(--muted); font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.5px;
+  transition:all .2s; position:relative;
+  padding-bottom:2px;
+  -webkit-tap-highlight-color:transparent;
+}
+.bn-item:hover { color:var(--text2); }
+.bn-item.active { color:var(--gold); }
+.bn-item.active .bn-ico-wrap { background:var(--gold-dim); }
+.bn-ico-wrap {
+  width:38px; height:28px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; transition:background .2s;
+}
+.bn-label { font-size:9px; font-weight:700; letter-spacing:.6px; }
+
+/* Botão Saída — destacado no centro */
+.bn-item.bn-saida .bn-ico-wrap {
+  width:50px; height:36px; border-radius:14px;
+  background:var(--red);
+  box-shadow:0 4px 16px rgba(224,82,82,.4);
+  margin-top:-10px;
+}
+.bn-item.bn-saida.active .bn-ico-wrap {
+  background:var(--red);
+  box-shadow:0 6px 20px rgba(224,82,82,.5);
+}
+.bn-item.bn-saida { color:var(--red); }
+.bn-item.bn-saida.active { color:var(--red); }
+
+/* Badge alerta */
+.bn-badge {
+  position:absolute; top:4px; right:calc(50% - 22px);
+  width:8px; height:8px; background:var(--red);
+  border-radius:50%; border:2px solid var(--surface);
+  animation:pulse 2s infinite; display:none;
+}
+@keyframes pulse { 50% { opacity:.3; } }
+
+/* Menu "Mais" */
+#mais-menu {
+  position:fixed; bottom:calc(var(--nav-bottom) + 8px); right:8px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:16px;
+  padding:8px;
+  z-index:1100;
+  min-width:180px;
+  box-shadow:0 8px 40px rgba(0,0,0,.5);
+  display:none;
+  animation:popUp .2s ease;
+}
+@keyframes popUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+.mais-item {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 14px; border-radius:10px;
+  cursor:pointer; font-size:13px; font-weight:600;
+  color:var(--text2); transition:background .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.mais-item:hover { background:var(--surface2); }
+.mais-item .mi-ico { font-size:18px; width:24px; text-align:center; }
+.mais-item.mais-logout { color:var(--red); }
+.mais-item.mais-logout:hover { background:var(--red-dim); }
+.mais-divider { height:1px; background:var(--border); margin:4px 8px; }
+
+/* ═══════════════════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════════════════ */
+.container { max-width:700px; margin:auto; padding:20px 16px 24px; }
+.page { display:none; }
+.page.active { display:block; animation:fadeUp .22s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+/* ═══════════════════════════════════════════════════════
+   PAGE HEADER — Playfair nos títulos
+═══════════════════════════════════════════════════════ */
+.page-header { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+.page-header-ico {
+  width:44px; height:44px; border-radius:14px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; flex-shrink:0;
+}
+.ico-gold { background:var(--gold-dim); border:1px solid rgba(201,168,76,.25); }
+.ico-green { background:var(--green-dim); border:1px solid rgba(76,175,110,.25); }
+.ico-red { background:var(--red-dim); border:1px solid rgba(224,82,82,.25); }
+.ico-blue { background:var(--blue-dim); border:1px solid rgba(91,141,238,.25); }
+.page-header-title {
+  font-family:var(--font-title);
+  font-size:22px; font-weight:700; letter-spacing:.1px;
+}
+.page-header-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+
+/* ═══════════════════════════════════════════════════════
+   CARDS
+═══════════════════════════════════════════════════════ */
+.card {
+  background:var(--card-grad);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:20px; margin-bottom:14px;
+  position:relative; overflow:hidden;
+}
+.card.accent-gold::before,
+.card.accent-green::before,
+.card.accent-red::before,
+.card.accent-blue::before {
+  content:''; position:absolute; left:0; top:12px; bottom:12px; width:2px; border-radius:2px;
+}
+.card.accent-gold::before  { background:linear-gradient(180deg,transparent,var(--gold),transparent); }
+.card.accent-green::before { background:linear-gradient(180deg,transparent,var(--green),transparent); }
+.card.accent-red::before   { background:linear-gradient(180deg,transparent,var(--red),transparent); }
+.card.accent-blue::before  { background:linear-gradient(180deg,transparent,var(--blue),transparent); }
+.card-title {
+  font-size:10px; font-weight:700; color:var(--muted);
+  text-transform:uppercase; letter-spacing:1.2px; margin-bottom:16px;
+  display:flex; align-items:center; gap:6px;
+}
+.card-title::before { content:''; display:inline-block; width:10px; height:1px; background:var(--gold); opacity:.6; }
+
+/* ═══════════════════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════════════════ */
+.dash-hello {
+  margin-bottom:20px;
+}
+.dash-hello-title {
+  font-family:var(--font-title);
+  font-size:26px; font-weight:700; line-height:1.2;
+}
+.dash-hello-sub { font-size:13px; color:var(--muted); margin-top:4px; }
+.dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+.dash-box {
+  background:var(--card-grad); border:1px solid var(--border);
+  border-radius:14px; padding:16px; cursor:pointer; transition:border-color .2s, transform .15s;
+}
+.dash-box:active { transform:scale(.97); }
+.dash-box:hover { border-color:var(--border2); }
+.dash-box .dl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; font-weight:700; margin-bottom:6px; }
+.dash-box .dv { font-family:var(--font-mono); font-size:28px; font-weight:700; }
+.dash-box .ds { font-size:11px; color:var(--muted); margin-top:4px; }
+.dv.green{color:var(--green)} .dv.red{color:var(--red)} .dv.gold{color:var(--gold)} .dv.amber{color:var(--amber)}
+.dash-alert {
+  background:var(--red-dim); border:1px solid rgba(224,82,82,.3);
+  border-radius:14px; padding:14px 16px; margin-bottom:12px; display:none;
+}
+.dash-alert-title { font-size:11px; font-weight:700; color:var(--red); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px; }
+.dash-alert-item {
+  font-size:13px; padding:5px 0; border-bottom:1px solid rgba(224,82,82,.15);
+  display:flex; justify-content:space-between;
+}
+.dash-alert-item:last-child { border-bottom:none; }
+.dash-low { background:var(--amber-dim); border:1px solid rgba(212,148,58,.3); border-radius:14px; padding:14px 16px; margin-bottom:12px; display:none; }
+.dash-low-title { font-size:11px; font-weight:700; color:var(--amber); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px; }
+.recent-log { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+.recent-log:last-child { border-bottom:none; }
+.recent-log-nome { font-size:13px; font-weight:600; }
+.recent-log-hora { font-size:11px; color:var(--muted); font-family:var(--font-mono); }
+
+/* ═══════════════════════════════════════════════════════
+   INPUTS
+═══════════════════════════════════════════════════════ */
+.field { margin-bottom:12px; }
+.field label {
+  display:block; font-size:10px; font-weight:700; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px;
+}
+input[type=text],input[type=password],input[type=number],input[type=date],
+input[type=email],select,textarea {
+  width:100%; padding:13px 14px;
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:12px; color:var(--text);
+  font-family:var(--font-body); font-size:14px;
+  transition:border-color .2s, box-shadow .2s; appearance:none;
+}
+input:focus,select:focus,textarea:focus {
+  outline:none; border-color:var(--gold); box-shadow:0 0 0 3px var(--gold-dim);
+}
+input::placeholder,textarea::placeholder { color:var(--muted); font-size:13px; }
+select option { background:var(--surface2); }
+textarea { resize:vertical; min-height:70px; }
+
+/* ═══════════════════════════════════════════════════════
+   AUTOCOMPLETE
+═══════════════════════════════════════════════════════ */
+.ac-wrap { position:relative; }
+.ac-list {
+  position:absolute; top:calc(100% + 5px); left:0; right:0;
+  background:var(--surface2); border:1px solid var(--gold);
+  border-radius:14px; z-index:600; max-height:240px; overflow-y:auto; display:none;
+  box-shadow:0 8px 40px rgba(0,0,0,.5);
+}
+.ac-item {
+  padding:12px 16px; cursor:pointer;
+  border-bottom:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center;
+  transition:background .12s;
+}
+.ac-item:last-child { border-bottom:none; }
+.ac-item:hover,.ac-item.sel { background:var(--gold-dim); }
+.ac-name { font-weight:600; font-size:13px; margin-bottom:2px; }
+.ac-code { font-size:10px; color:var(--muted); font-family:var(--font-mono); }
+
+/* ═══════════════════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════════════════ */
+.btn {
+  width:100%; padding:15px; border:none; border-radius:12px;
+  color:#fff; font-weight:700; cursor:pointer; font-size:13px;
+  font-family:var(--font-body); letter-spacing:.8px;
+  transition:filter .15s, transform .1s; text-transform:uppercase;
+  position:relative; overflow:hidden;
+}
+.btn::after { content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(255,255,255,.08),transparent 60%); pointer-events:none; }
+.btn:active { transform:scale(.98); }
+.btn:hover { filter:brightness(1.08); }
+.btn-gold  { background:linear-gradient(135deg,#b8932c,var(--gold)); color:#1a1400; }
+.btn-green { background:linear-gradient(135deg,#2e8b4e,var(--green)); }
+.btn-red   { background:linear-gradient(135deg,#b83232,var(--red)); }
+.btn-blue  { background:linear-gradient(135deg,#3a6acc,var(--blue)); }
+.btn-ghost { background:transparent; border:1px solid var(--border2); color:var(--text2); }
+.btn-ghost:hover { border-color:var(--gold); color:var(--gold); filter:none; }
+.btn-sm { padding:8px 16px; font-size:12px; border-radius:9px; width:auto; letter-spacing:.4px; }
+
+/* ═══════════════════════════════════════════════════════
+   BADGE
+═══════════════════════════════════════════════════════ */
+.badge {
+  display:inline-flex; align-items:center;
+  padding:3px 10px; border-radius:20px;
+  font-size:11px; font-weight:700; font-family:var(--font-mono);
+}
+.b-green { background:var(--green-dim); color:var(--green); }
+.b-red   { background:var(--red-dim);   color:var(--red); }
+.b-yellow{ background:var(--amber-dim); color:var(--amber); }
+.b-gray  { background:var(--surface3);  color:var(--muted); }
+.b-gold  { background:var(--gold-dim);  color:var(--gold); }
+.b-blue  { background:var(--blue-dim);  color:var(--blue); }
+
+/* ═══════════════════════════════════════════════════════
+   TABS (Estoque)
+═══════════════════════════════════════════════════════ */
+.tabs {
+  display:flex; gap:3px; background:var(--surface2);
+  padding:4px; border-radius:14px; margin-bottom:16px; border:1px solid var(--border);
+}
+.tab-btn {
+  flex:1; padding:9px; border:none; border-radius:11px;
+  background:transparent; color:var(--muted);
+  font-family:var(--font-body); font-size:11px; font-weight:700;
+  cursor:pointer; transition:all .2s; text-transform:uppercase; letter-spacing:.5px;
+}
+.tab-btn.active {
+  background:var(--surface3); color:var(--gold);
+  box-shadow:0 1px 6px rgba(0,0,0,.3); border:1px solid rgba(201,168,76,.2);
+}
+
+/* ═══════════════════════════════════════════════════════
+   TABLE
+═══════════════════════════════════════════════════════ */
+.section-label {
+  font-size:10px; font-weight:800; color:var(--muted);
+  text-transform:uppercase; letter-spacing:1.2px;
+  margin:18px 0 8px 2px;
+  display:flex; align-items:center; gap:8px;
+}
+.section-label::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,var(--border),transparent); }
+table { width:100%; border-collapse:collapse; }
+th {
+  font-size:10px; color:var(--muted); font-weight:700;
+  text-transform:uppercase; letter-spacing:.6px;
+  padding:10px 14px; border-bottom:1px solid var(--border); text-align:left;
+}
+td { padding:13px 14px; border-bottom:1px solid var(--border); font-size:13px; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:rgba(201,168,76,.04); }
+.venc { color:var(--red); font-weight:700; animation:blink 1.6s infinite; }
+.venc-soon { color:var(--amber); font-weight:600; }
+@keyframes blink { 50% { opacity:.4; } }
+.btn-edit {
+  width:28px; height:28px; background:transparent; border:1px solid var(--border);
+  border-radius:8px; cursor:pointer; color:var(--muted); font-size:13px;
+  display:inline-flex; align-items:center; justify-content:center; transition:all .15s;
+}
+.btn-edit:hover { background:var(--gold-dim); border-color:var(--gold); color:var(--gold); }
+
+/* ═══════════════════════════════════════════════════════
+   MODAIS
+═══════════════════════════════════════════════════════ */
+.modal-bg {
+  position:fixed; inset:0; z-index:8000; background:rgba(0,0,0,.75);
+  backdrop-filter:blur(4px);
+  display:flex; align-items:flex-end; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .25s;
+}
+.modal-bg.open { opacity:1; pointer-events:all; }
+.modal-box {
+  background:var(--surface); border:1px solid var(--border2);
+  border-top:1px solid rgba(201,168,76,.2);
+  border-radius:24px 24px 0 0;
+  padding:30px 24px 44px;
+  width:100%; max-width:520px;
+  transform:translateY(40px);
+  transition:transform .32s cubic-bezier(.2,1.1,.4,1);
+  position:relative; max-height:90vh; overflow-y:auto;
+}
+.modal-box::before {
+  content:''; position:absolute; top:10px; left:50%; transform:translateX(-50%);
+  width:40px; height:4px; background:var(--border2); border-radius:2px;
+}
+.modal-bg.open .modal-box { transform:translateY(0); }
+.modal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; margin-top:8px; }
+.modal-title { font-family:var(--font-title); font-size:18px; font-weight:700; }
+.modal-close {
+  width:30px; height:30px; border-radius:50%; background:var(--surface2);
+  border:1px solid var(--border); cursor:pointer; color:var(--muted); font-size:16px;
+  display:flex; align-items:center; justify-content:center; transition:all .2s;
+}
+.modal-close:hover { background:var(--red-dim); border-color:var(--red); color:var(--red); }
+.modal-code {
+  font-size:10px; font-family:var(--font-mono); color:var(--muted);
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:6px; padding:3px 10px; margin-bottom:18px; display:inline-block;
+}
+#confirm-modal .modal-box { max-width:380px; border-radius:20px; align-self:center; }
+.confirm-product { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:16px; }
+.confirm-product .cp-nome { font-family:var(--font-title); font-weight:700; font-size:16px; }
+.confirm-product .cp-det { font-size:12px; color:var(--muted); margin-top:4px; font-family:var(--font-mono); }
+.confirm-msg { font-size:14px; line-height:1.6; margin-bottom:20px; color:var(--text2); }
+#hist-modal .modal-box { max-width:480px; }
+.hist-item { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+.hist-item:last-child { border-bottom:none; }
+.hist-meta { font-size:11px; color:var(--muted); font-family:var(--font-mono); }
+.hist-qty { font-family:var(--font-mono); font-size:13px; font-weight:700; }
+#passwd-modal .modal-box { max-width:380px; border-radius:20px; align-self:center; }
+
+/* ═══════════════════════════════════════════════════════
+   SAÍDA
+═══════════════════════════════════════════════════════ */
+#sai-preview-box {
+  background:var(--surface2); border:1px solid var(--border);
+  border-left:2px solid var(--gold); border-radius:12px; padding:14px; margin-bottom:12px; display:none;
+}
+.recibo-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+.recibo-row:last-child { border-bottom:none; }
+.recibo-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; font-weight:700; }
+.recibo-val { font-size:14px; font-weight:700; font-family:var(--font-mono); }
+
+/* ═══════════════════════════════════════════════════════
+   ESTOQUE
+═══════════════════════════════════════════════════════ */
+#soma-bar {
+  background:var(--gold-dim); border:1px solid rgba(201,168,76,.3);
+  border-radius:12px; padding:12px 16px; margin-bottom:14px;
+  display:none; align-items:center; justify-content:space-between;
+}
+#soma-bar .s-label { font-size:10px; color:var(--gold); font-weight:700; text-transform:uppercase; letter-spacing:.8px; }
+#soma-bar .s-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+#soma-bar .s-val { font-family:var(--font-mono); font-size:22px; font-weight:700; color:var(--gold); }
+.search-wrap { position:relative; margin-bottom:14px; }
+.search-wrap input { padding-left:42px; }
+.search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none; font-size:15px; }
+.bc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; }
+.bc-card { background:var(--card-grad); border:1px solid var(--border); border-radius:14px; padding:16px; text-align:center; }
+.bc-nome { font-size:12px; font-weight:700; margin-bottom:4px; word-break:break-word; }
+.bc-code { font-size:10px; color:var(--muted); font-family:var(--font-mono); margin-bottom:8px; }
+.bc-saldo { font-size:11px; color:var(--muted); margin-top:8px; }
+
+/* ═══════════════════════════════════════════════════════
+   RELATÓRIOS
+═══════════════════════════════════════════════════════ */
+.stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+.stat-box { background:var(--card-grad); border:1px solid var(--border); border-radius:14px; padding:16px; }
+.stat-box .sl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; font-weight:700; margin-bottom:8px; }
+.stat-box .sv { font-family:var(--font-mono); font-size:28px; font-weight:700; }
+.sv.green{color:var(--green)} .sv.red{color:var(--red)}
+.period-tabs { display:flex; gap:6px; margin-bottom:16px; }
+.pt { padding:8px 16px; border-radius:10px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; font-family:var(--font-body); font-size:12px; font-weight:700; transition:all .2s; }
+.pt.active { background:var(--gold-dim); border-color:var(--gold); color:var(--gold); }
+.rank-item { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); }
+.rank-item:last-child { border-bottom:none; }
+.rank-n { font-family:var(--font-mono); font-size:11px; color:var(--muted); width:18px; text-align:center; }
+.rank-bar-wrap { flex:1; }
+.rank-nome { font-size:13px; font-weight:600; margin-bottom:5px; }
+.rank-bar { height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+.rank-fill { height:100%; border-radius:2px; transition:width .7s ease; }
+.rank-qty { font-family:var(--font-mono); font-size:13px; font-weight:700; min-width:50px; text-align:right; }
+
+/* ═══════════════════════════════════════════════════════
+   DIÁRIO
+═══════════════════════════════════════════════════════ */
+.log-card {
+  background:var(--card-grad); border:1px solid var(--border);
+  border-radius:14px; padding:14px 16px;
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:8px; transition:border-color .2s;
+}
+.log-card:hover { border-color:var(--border2); }
+.log-hora { font-family:var(--font-mono); font-size:11px; color:var(--muted); }
+.log-nome { font-size:13px; font-weight:600; }
+.log-obs { font-size:11px; color:var(--muted); margin-top:2px; font-style:italic; }
+
+/* ═══════════════════════════════════════════════════════
+   USUÁRIOS
+═══════════════════════════════════════════════════════ */
+.user-item { display:flex; align-items:center; justify-content:space-between; padding:13px 0; border-bottom:1px solid var(--border); }
+.user-item:last-child { border-bottom:none; }
+.user-name { font-weight:700; font-size:14px; }
+.user-level { font-size:11px; margin-top:3px; }
+.user-actions { display:flex; gap:8px; }
+
+/* ═══════════════════════════════════════════════════════
+   QR
+═══════════════════════════════════════════════════════ */
+.qr-wrap { border-radius:14px; overflow:hidden; background:#000; margin-bottom:14px; display:none; }
+.qr-toggle {
+  display:inline-flex; align-items:center; gap:7px;
+  font-size:12px; color:var(--gold); cursor:pointer; margin-bottom:14px;
+  font-weight:700; padding:8px 14px;
+  border:1px solid rgba(201,168,76,.3); border-radius:10px;
+  background:var(--gold-dim); transition:all .2s;
+}
+.qr-toggle:hover { background:rgba(201,168,76,.22); }
+
+/* ═══════════════════════════════════════════════════════
+   MISC
+═══════════════════════════════════════════════════════ */
+.row-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.divider { height:1px; background:var(--border); margin:16px 0; }
+.empty { text-align:center; padding:30px 20px; color:var(--muted); font-size:13px; }
+
+/* Toast */
+#toast {
+  position:fixed; bottom:calc(var(--nav-bottom) + 12px); left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--surface); border:1px solid var(--border2);
+  padding:12px 22px; border-radius:40px; font-size:13px; font-weight:600;
+  z-index:9000; transition:transform .3s cubic-bezier(.2,1,.4,1), opacity .3s;
+  box-shadow:0 8px 40px rgba(0,0,0,.5); white-space:nowrap; opacity:0;
+}
+#toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+#toast.ok   { border-color:var(--green); color:var(--green); }
+#toast.err  { border-color:var(--red);   color:var(--red); }
+#toast.warn { border-color:var(--amber); color:var(--amber); }
+
+/* Theme btn */
+#theme-btn {
+  position:fixed; bottom:calc(var(--nav-bottom) + 12px); right:16px;
+  width:42px; height:42px; background:var(--surface2); border:1px solid var(--border2);
+  border-radius:50%; display:none; align-items:center; justify-content:center;
+  cursor:pointer; font-size:18px; box-shadow:0 4px 20px rgba(0,0,0,.4);
+  z-index:800; transition:transform .2s;
+}
+#theme-btn:hover { transform:scale(1.1); }
+
+/* Offline banner */
+#offline-banner {
+  position:fixed; top:0; left:0; right:0; z-index:9500;
+  background:var(--amber); color:#1a1000;
+  text-align:center; font-size:12px; font-weight:700;
+  padding:6px; display:none;
+  letter-spacing:.5px; text-transform:uppercase;
+}
+
+/* Low stock tab */
+.low-item { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); }
+.low-item:last-child { border-bottom:none; }
+</style>
+</head>
 <body>
 
-<!-- LOGIN -->
-<!-- AUTH LOADING SPINNER (shown while Firebase checks auth state) -->
+<!-- OFFLINE BANNER -->
+<div id="offline-banner">📵 Sem conexão — dados podem estar desatualizados</div>
+
+<!-- AUTH LOADING -->
 <div id="auth-loading">
   <div class="spinner"></div>
   <div class="auth-loading-txt">Verificando sessão...</div>
 </div>
 
-<div id="login-screen" style="display:none">
+<!-- LOGIN -->
+<div id="login-screen">
   <div class="login-box">
     <img src="assets/intendencia.png" alt="Logo" class="login-logo-img">
     <h2>Depósito Aprov</h2>
@@ -58,275 +660,268 @@
     <div id="login-error">Email ou senha incorretos.</div>
     <div class="forgot-link" id="btn-forgot">Esqueci minha senha →</div>
     <div id="reset-panel">
-      <p>Solicite ao <b>Administrador</b> que redefina sua senha pelo painel de Usuários.</p>
+      <p>Solicite ao <b>Administrador</b> que redefina sua senha.</p>
       <p style="margin-top:6px">Admin: <span style="color:var(--gold)">lucasbcavalcante4@gmail.com</span></p>
     </div>
   </div>
 </div>
 
-<!-- NAV -->
-<nav class="nav" id="main-nav">
-  <div class="nav-logo"><img src="assets/intendencia2.png" alt="logo"></div>
-  <div class="nav-item" data-tab="dashboard">🏠 Início</div>
-  <div class="nav-item level-entrada" data-tab="entrada">📥 Entrada</div>
-  <div class="nav-item" data-tab="saida">📤 Saída</div>
-  <div class="nav-item" data-tab="estoque">🗂️ Estoque<span class="nav-badge" id="nav-badge-estoque"></span></div>
-  <div class="nav-item level-admin" data-tab="diario">📋 Diário</div>
-  <div class="nav-item level-admin" data-tab="relatorio">📊 Relatórios</div>
-  <div class="nav-item level-admin" data-tab="usuarios">👥 Usuários</div>
+<!-- APP -->
+<div id="app" style="display:none">
+  <div class="container" id="app-container">
 
-  <div class="nav-item" id="btn-nav-logout" style="margin-left:auto;color:var(--red)" title="Sair">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sair
-  </div>
-</nav>
-
-<div class="container" id="app" style="display:none">
-
-  <!-- ══════ DASHBOARD ══════ -->
-  <div id="page-dashboard" class="page">
-    <div class="page-header">
-      <div class="page-header-ico ico-gold">🏠</div>
-      <div><div class="page-header-title" id="dash-greeting">Bom dia!</div><div class="page-header-sub" id="dash-user-label"></div></div>
-    </div>
-    <!-- Alertas críticos -->
-    <div class="dash-alert" id="dash-alert">
-      <div class="dash-alert-title">🚨 Itens vencidos / vencendo em 7 dias</div>
-      <div id="dash-alert-list"></div>
-    </div>
-    <!-- Estoque baixo -->
-    <div class="dash-low" id="dash-low">
-      <div class="dash-low-title">⚠️ Estoque abaixo do mínimo</div>
-      <div id="dash-low-list"></div>
-    </div>
-    <!-- Métricas -->
-    <div class="dash-grid" id="dash-metrics"></div>
-    <!-- Últimas movimentações -->
-    <div class="card">
-      <div class="card-title">Últimas movimentações hoje</div>
-      <div id="dash-recent"></div>
-    </div>
-  </div>
-
-  <!-- ══════ ENTRADA ══════ -->
-  <div id="page-entrada" class="page">
-    <div class="page-header">
-      <div class="page-header-ico ico-green">📥</div>
-      <div><div class="page-header-title">Entrada de Item</div><div class="page-header-sub">Registre a chegada de um produto</div></div>
-    </div>
-    <div class="qr-wrap" id="qr-wrap-entrada"><div id="qr-reader-entrada"></div></div>
-    <div class="qr-toggle" id="qr-toggle-entrada">📷 <span>Usar câmera / QR Code</span></div>
-    <div class="card accent-green">
-      <div class="card-title">Dados do produto</div>
-      <div class="field"><label>Código de barras</label><input type="text" id="ent-code" placeholder="Ex: 7891000100103"></div>
-      <div class="field"><label>Nome / Marca</label><input type="text" id="ent-nome" placeholder="Ex: Leite Integral 1L"></div>
-      <div class="field"><label>Validade</label><input type="date" id="ent-val"></div>
-      <div class="field"><label>Setor</label>
-        <select id="ent-setor">
-          <option value="SECO">📦 Secos</option>
-          <option value="FRIGORIFICO">🥩 Frigorífico</option>
-        </select>
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page">
+      <div class="dash-hello">
+        <div class="dash-hello-title" id="dash-greeting">Bom dia!</div>
+        <div class="dash-hello-sub" id="dash-user-label"></div>
       </div>
-      <div class="row-2">
-        <div class="field"><label>Unidade</label>
-          <select id="ent-unidade">
-            <option value="un">Unidade (un)</option>
-            <option value="kg">Quilograma (kg)</option>
-            <option value="g">Gramas (g)</option>
-            <option value="L">Litro (L)</option>
-            <option value="ml">Mililitro (ml)</option>
-            <option value="lata">Lata</option>
-            <option value="cx">Caixa (cx)</option>
-            <option value="pct">Pacote (pct)</option>
+      <div class="dash-alert" id="dash-alert">
+        <div class="dash-alert-title">🚨 Vencidos / vencendo em 7 dias</div>
+        <div id="dash-alert-list"></div>
+      </div>
+      <div class="dash-low" id="dash-low">
+        <div class="dash-low-title">⚠️ Estoque abaixo do mínimo</div>
+        <div id="dash-low-list"></div>
+      </div>
+      <div class="dash-grid" id="dash-metrics"></div>
+      <div class="card">
+        <div class="card-title">Últimas movimentações</div>
+        <div id="dash-recent"></div>
+      </div>
+    </div>
+
+    <!-- ENTRADA -->
+    <div id="page-entrada" class="page">
+      <div class="page-header">
+        <div class="page-header-ico ico-green">📥</div>
+        <div>
+          <div class="page-header-title">Entrada</div>
+          <div class="page-header-sub">Registre a chegada de um produto</div>
+        </div>
+      </div>
+      <div class="qr-wrap" id="qr-wrap-entrada"><div id="qr-reader-entrada"></div></div>
+      <div class="qr-toggle" id="qr-toggle-entrada">📷 <span>Usar câmera / QR Code</span></div>
+      <div class="card accent-green">
+        <div class="card-title">Dados do produto</div>
+        <div class="field"><label>Código</label><input type="text" id="ent-code" placeholder="Ex: 7891000100103"></div>
+        <div class="field"><label>Nome / Marca</label><input type="text" id="ent-nome" placeholder="Ex: Leite Integral 1L"></div>
+        <div class="field"><label>Validade</label><input type="date" id="ent-val"></div>
+        <div class="field"><label>Setor</label>
+          <select id="ent-setor">
+            <option value="SECO">📦 Secos</option>
+            <option value="FRIGORIFICO">🥩 Frigorífico</option>
           </select>
         </div>
-        <div class="field"><label>Quantidade</label><input type="number" id="ent-qtd" value="1" min="0.001" step="any"></div>
+        <div class="row-2">
+          <div class="field"><label>Unidade</label>
+            <select id="ent-unidade">
+              <option value="un">Unidade (un)</option>
+              <option value="kg">Quilograma (kg)</option>
+              <option value="g">Gramas (g)</option>
+              <option value="L">Litro (L)</option>
+              <option value="ml">Mililitro (ml)</option>
+              <option value="lata">Lata</option>
+              <option value="cx">Caixa (cx)</option>
+              <option value="pct">Pacote (pct)</option>
+            </select>
+          </div>
+          <div class="field"><label>Quantidade</label><input type="number" id="ent-qtd" value="1" min="0.001" step="any"></div>
+        </div>
+        <div class="field"><label>Estoque mínimo</label><input type="number" id="ent-minimo" value="0" min="0" step="any" placeholder="0 = sem alerta"></div>
+        <div class="field"><label>Observação <span style="color:var(--muted);font-weight:400">(opcional)</span></label><textarea id="ent-obs" placeholder="Ex: NF 1234, fornecedor X..."></textarea></div>
+        <button class="btn btn-green" id="btn-entrada">✓ CONFIRMAR ENTRADA</button>
       </div>
-      <div class="field"><label>Estoque mínimo <span style="color:var(--muted);font-weight:400">(alerta abaixo desse valor)</span></label><input type="number" id="ent-minimo" value="0" min="0" step="any" placeholder="0 = sem alerta"></div>
-      <div class="field"><label>Observação <span style="color:var(--muted);font-weight:400">(opcional)</span></label><textarea id="ent-obs" placeholder="Ex: Nota fiscal 1234, fornecedor X..."></textarea></div>
-      <button class="btn btn-green" id="btn-entrada">✓ CONFIRMAR ENTRADA</button>
     </div>
-  </div>
 
-  <!-- ══════ SAÍDA ══════ -->
-  <div id="page-saida" class="page">
-    <div class="page-header">
-      <div class="page-header-ico ico-red">📤</div>
-      <div>
-        <div class="page-header-title">Registrar Saída</div>
-        <div class="page-header-sub" id="sai-data-label"></div>
-      </div>
-    </div>
-    <div class="qr-wrap" id="qr-wrap-saida"><div id="qr-reader-saida"></div></div>
-    <div class="qr-toggle" id="qr-toggle-saida">📷 <span>Usar câmera / QR Code</span></div>
-    <div class="card accent-red">
-      <div class="card-title">Selecionar produto</div>
-      <div class="field">
-        <label>Buscar por nome ou código</label>
-        <div class="ac-wrap">
-          <input type="text" id="sai-busca" placeholder="Digite para buscar..." autocomplete="off">
-          <div class="ac-list" id="ac-list"></div>
+    <!-- SAÍDA -->
+    <div id="page-saida" class="page">
+      <div class="page-header">
+        <div class="page-header-ico ico-red">📤</div>
+        <div>
+          <div class="page-header-title">Saída</div>
+          <div class="page-header-sub" id="sai-data-label"></div>
         </div>
       </div>
-      <div id="sai-preview-box">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.8px">Produto selecionado</div>
-        <div id="prev-nome" style="font-weight:700;font-size:14px;margin-bottom:8px"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <span id="prev-saldo" class="badge b-green"></span>
-          <span id="prev-val" class="badge b-gray"></span>
-          <span id="prev-min" class="badge b-gray" style="display:none"></span>
+      <div class="qr-wrap" id="qr-wrap-saida"><div id="qr-reader-saida"></div></div>
+      <div class="qr-toggle" id="qr-toggle-saida">📷 <span>Usar câmera / QR Code</span></div>
+      <div class="card accent-red">
+        <div class="card-title">Selecionar produto</div>
+        <div class="field">
+          <label>Buscar por nome ou código</label>
+          <div class="ac-wrap">
+            <input type="text" id="sai-busca" placeholder="Digite para buscar..." autocomplete="off">
+            <div class="ac-list" id="ac-list"></div>
+          </div>
+        </div>
+        <div id="sai-preview-box">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.8px">Produto selecionado</div>
+          <div id="prev-nome" style="font-weight:700;font-size:15px;margin-bottom:8px"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <span id="prev-saldo" class="badge b-green"></span>
+            <span id="prev-val" class="badge b-gray"></span>
+            <span id="prev-min" class="badge b-gray" style="display:none"></span>
+          </div>
+        </div>
+        <input type="hidden" id="sai-code">
+        <input type="hidden" id="sai-data">
+        <div class="field"><label>Quantidade</label><input type="number" id="sai-qtd" value="1" min="0.001" step="any"></div>
+        <div class="field">
+          <label>Finalidade <span id="sai-obs-required" style="color:var(--red)">*</span></label>
+          <textarea id="sai-obs" placeholder="Ex: Almoço, Jantar, Evento..."></textarea>
+        </div>
+        <div class="field" id="sai-data-field" style="display:none">
+          <label>Data <span style="color:var(--muted);font-weight:400">(vazio = hoje)</span></label>
+          <input type="date" id="sai-data-manual">
+        </div>
+        <button class="btn btn-red" id="btn-saida">✓ CONFIRMAR SAÍDA</button>
+      </div>
+      <div id="recibo-box" style="display:none">
+        <div class="card accent-green">
+          <div class="card-title">✅ Saída registrada</div>
+          <div id="recibo-content"></div>
+          <button class="btn btn-ghost" style="margin-top:12px" onclick="fecharRecibo()">Nova saída</button>
         </div>
       </div>
-      <input type="hidden" id="sai-code">
-      <input type="hidden" id="sai-data">
-      <div class="field"><label>Quantidade</label><input type="number" id="sai-qtd" value="1" min="0.001" step="any"></div>
-      <div class="field">
-        <label>Finalidade <span id="sai-obs-required" style="color:var(--red)">*</span></label>
-        <textarea id="sai-obs" placeholder="Ex: Almoço, Jantar, Evento..."></textarea>
-      </div>
-      <!-- Campo de data visível apenas para Admin/Supervisor -->
-      <div class="field level-supervisor-field" id="sai-data-field" style="display:none">
-        <label>Data <span style="color:var(--muted);font-weight:400">(vazio = hoje)</span></label>
-        <input type="date" id="sai-data-manual">
-      </div>
-      <button class="btn btn-red" id="btn-saida">✓ CONFIRMAR SAÍDA</button>
     </div>
 
-    <!-- RECIBO pós-saída (visível só para Operador) -->
-    <div id="recibo-box" style="display:none">
-      <div class="card accent-green">
-        <div class="card-title">✅ Saída registrada</div>
-        <div id="recibo-content"></div>
-        <button class="btn btn-ghost" style="margin-top:12px" onclick="fecharRecibo()">Nova saída</button>
+    <!-- ESTOQUE -->
+    <div id="page-estoque" class="page">
+      <div class="page-header">
+        <div class="page-header-ico ico-gold">🗂️</div>
+        <div>
+          <div class="page-header-title">Estoque</div>
+          <div class="page-header-sub">Visualize e gerencie</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto" id="btn-export-csv">⬇ CSV</button>
+      </div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="filtro-estoque" placeholder="Pesquisar produto...">
+      </div>
+      <div id="soma-bar">
+        <div><div class="s-label">Total encontrado</div><div class="s-sub" id="soma-sub"></div></div>
+        <div class="s-val" id="soma-val"></div>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn active" data-estoque-tab="lista">📋 Itens</button>
+        <button class="tab-btn" data-estoque-tab="vencimentos">⏰ Venc.</button>
+        <button class="tab-btn" data-estoque-tab="minimo">📉 Mínimo</button>
+        <button class="tab-btn" data-estoque-tab="codigos">🏷️ Códigos</button>
+      </div>
+      <div id="tab-lista">
+        <div class="section-label">🥩 Frigorífico</div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table><thead><tr><th>Item</th><th style="text-align:center">Qtd</th><th>Validade</th></tr></thead>
+          <tbody id="tbody-frigo"></tbody></table>
+        </div>
+        <div class="section-label">📦 Secos</div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table><thead><tr><th>Item</th><th style="text-align:center">Qtd</th><th>Validade</th></tr></thead>
+          <tbody id="tbody-secos"></tbody></table>
+        </div>
+      </div>
+      <div id="tab-vencimentos" style="display:none">
+        <div class="section-label" style="color:var(--red)">🚨 Vencidos / até 7 dias</div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table><thead><tr><th>Item</th><th>Setor</th><th>Validade</th><th style="text-align:center">Qtd</th></tr></thead>
+          <tbody id="tbody-venc-crit"></tbody></table>
+        </div>
+        <div class="section-label" style="color:var(--amber)">⚠️ 8 a 30 dias</div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table><thead><tr><th>Item</th><th>Setor</th><th>Validade</th><th style="text-align:center">Qtd</th></tr></thead>
+          <tbody id="tbody-venc-aviso"></tbody></table>
+        </div>
+      </div>
+      <div id="tab-minimo" style="display:none">
+        <div class="card" style="padding:0;overflow:hidden">
+          <table><thead><tr><th>Item</th><th style="text-align:center">Atual</th><th style="text-align:center">Mínimo</th><th style="text-align:center">Status</th></tr></thead>
+          <tbody id="tbody-minimo"></tbody></table>
+        </div>
+      </div>
+      <div id="tab-codigos" style="display:none">
+        <div class="bc-grid" id="bc-grid"></div>
       </div>
     </div>
-  </div>
 
-  <!-- ══════ ESTOQUE ══════ -->
-  <div id="page-estoque" class="page">
-    <div class="page-header">
-      <div class="page-header-ico ico-gold">🗂️</div>
-      <div>
-        <div class="page-header-title">Estoque</div>
-        <div class="page-header-sub">Visualize e gerencie os itens</div>
+    <!-- DIÁRIO -->
+    <div id="page-diario" class="page">
+      <div class="page-header">
+        <div class="page-header-ico ico-blue">📋</div>
+        <div>
+          <div class="page-header-title">Diário</div>
+          <div class="page-header-sub">Movimentações por data</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <button class="btn btn-ghost btn-sm level-admin" id="btn-export-completo">📦 Backup</button>
+          <button class="btn btn-ghost btn-sm" id="btn-export-diario">⬇ XLSX</button>
+        </div>
       </div>
-      <button class="btn btn-ghost btn-sm" style="margin-left:auto" id="btn-export-csv">⬇ CSV</button>
+      <div class="card">
+        <div class="field"><label>Data</label><input type="date" id="data-diario"></div>
+        <div style="display:flex;gap:10px;margin-top:4px" id="diario-totais"></div>
+      </div>
+      <div id="lista-diario"></div>
     </div>
-    <div class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input type="text" id="filtro-estoque" placeholder="Pesquisar produto...">
+
+    <!-- RELATÓRIOS -->
+    <div id="page-relatorio" class="page">
+      <div class="page-header">
+        <div class="page-header-ico ico-gold">📊</div>
+        <div>
+          <div class="page-header-title">Relatórios</div>
+          <div class="page-header-sub">Métricas e rankings</div>
+        </div>
+      </div>
+      <div class="stats-grid" id="rel-stats"></div>
+      <div class="period-tabs">
+        <button class="pt active" data-period="semana">7 dias</button>
+        <button class="pt" data-period="mes">30 dias</button>
+        <button class="pt" data-period="tudo">Tudo</button>
+      </div>
+      <div class="card"><div class="card-title">Mais retirados</div><div id="rank-saidas"></div></div>
+      <div class="card"><div class="card-title">Mais recebidos</div><div id="rank-entradas"></div></div>
     </div>
-    <div id="soma-bar">
-      <div><div class="s-label">Total encontrado</div><div class="s-sub" id="soma-sub"></div></div>
-      <div class="s-val" id="soma-val"></div>
-    </div>
-    <div class="tabs">
-      <button class="tab-btn active" data-estoque-tab="lista">📋 Itens</button>
-      <button class="tab-btn" data-estoque-tab="vencimentos">⏰ Vencimentos</button>
-      <button class="tab-btn" data-estoque-tab="minimo">📉 Estoque Baixo</button>
-      <button class="tab-btn" data-estoque-tab="codigos">🏷️ Códigos</button>
-    </div>
-    <div id="tab-lista">
-      <div class="section-label">🥩 Frigorífico</div>
+
+    <!-- USUÁRIOS -->
+    <div id="page-usuarios" class="page">
+      <div class="page-header">
+        <div class="page-header-ico ico-blue">👥</div>
+        <div>
+          <div class="page-header-title">Usuários</div>
+          <div class="page-header-sub">Gerencie o acesso</div>
+        </div>
+      </div>
+      <div class="card accent-blue">
+        <div class="card-title">Novo usuário</div>
+        <div class="field"><label>Nome completo</label><input type="text" id="new-user-nome" placeholder="Ex: SGT Silva" autocomplete="off"></div>
+        <div class="field"><label>Email</label><input type="email" id="new-user-login" placeholder="email@exemplo.com" autocomplete="off"></div>
+        <div class="field"><label>Senha inicial</label><input type="password" id="new-user-pass" placeholder="Mínimo 6 caracteres"></div>
+        <div class="field"><label>Nível de acesso</label>
+          <select id="new-user-nivel">
+            <option value="OPERADOR">🟢 Operador — apenas Saída e Estoque</option>
+            <option value="SUPERVISOR">🟡 Supervisor — Entrada, Saída, Estoque e Diário</option>
+            <option value="ADMIN">🔴 Admin — acesso total</option>
+          </select>
+        </div>
+        <button class="btn btn-blue btn-sm" id="btn-criar-usuario" style="width:auto;padding:10px 24px">+ CRIAR USUÁRIO</button>
+      </div>
       <div class="card" style="padding:0;overflow:hidden">
-        <table><thead><tr><th>Item</th><th style="text-align:center">Qtd</th><th>Validade</th></tr></thead>
-        <tbody id="tbody-frigo"></tbody></table>
-      </div>
-      <div class="section-label">📦 Secos</div>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table><thead><tr><th>Item</th><th style="text-align:center">Qtd</th><th>Validade</th></tr></thead>
-        <tbody id="tbody-secos"></tbody></table>
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+          <div class="card-title" style="margin-bottom:0">Usuários cadastrados</div>
+        </div>
+        <div id="lista-usuarios" style="padding:0 16px"></div>
       </div>
     </div>
-    <div id="tab-vencimentos" style="display:none">
-      <div class="section-label" style="color:var(--red)">🚨 Vencidos / até 7 dias</div>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table><thead><tr><th>Item</th><th>Setor</th><th>Validade</th><th style="text-align:center">Qtd</th></tr></thead>
-        <tbody id="tbody-venc-crit"></tbody></table>
-      </div>
-      <div class="section-label" style="color:var(--amber)">⚠️ 8 a 30 dias</div>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table><thead><tr><th>Item</th><th>Setor</th><th>Validade</th><th style="text-align:center">Qtd</th></tr></thead>
-        <tbody id="tbody-venc-aviso"></tbody></table>
-      </div>
-    </div>
-    <div id="tab-minimo" style="display:none">
-      <div class="card" style="padding:0;overflow:hidden">
-        <table><thead><tr><th>Item</th><th style="text-align:center">Atual</th><th style="text-align:center">Mínimo</th><th style="text-align:center">Status</th></tr></thead>
-        <tbody id="tbody-minimo"></tbody></table>
-      </div>
-    </div>
-    <div id="tab-codigos" style="display:none">
-      <div class="bc-grid" id="bc-grid"></div>
-    </div>
-  </div>
 
-  <!-- ══════ DIÁRIO ══════ -->
-  <div id="page-diario" class="page">
-    <div class="page-header">
-      <div class="page-header-ico ico-blue">📋</div>
-      <div><div class="page-header-title">Diário</div><div class="page-header-sub">Movimentações por data</div></div>
-      <div style="display:flex;gap:8px;margin-left:auto">
-        <button class="btn btn-ghost btn-sm level-admin" id="btn-export-completo" title="XLSX com todas as datas">📦 Backup</button>
-        <button class="btn btn-ghost btn-sm" id="btn-export-diario">⬇ XLSX</button>
-      </div>
-    </div>
-    <div class="card">
-      <div class="field"><label>Data</label><input type="date" id="data-diario"></div>
-      <div style="display:flex;gap:10px;margin-top:4px" id="diario-totais"></div>
-    </div>
-    <div id="lista-diario"></div>
-  </div>
+  </div><!-- /container -->
+</div><!-- /app -->
 
-  <!-- ══════ RELATÓRIOS ══════ -->
-  <div id="page-relatorio" class="page">
-    <div class="page-header">
-      <div class="page-header-ico ico-gold">📊</div>
-      <div><div class="page-header-title">Relatórios</div><div class="page-header-sub">Métricas e rankings</div></div>
-    </div>
-    <div class="stats-grid" id="rel-stats"></div>
-    <div class="period-tabs">
-      <button class="pt active" data-period="semana">7 dias</button>
-      <button class="pt" data-period="mes">30 dias</button>
-      <button class="pt" data-period="tudo">Tudo</button>
-    </div>
-    <div class="card"><div class="card-title">Mais retirados</div><div id="rank-saidas"></div></div>
-    <div class="card"><div class="card-title">Mais recebidos</div><div id="rank-entradas"></div></div>
-  </div>
-
-  <!-- ══════ USUÁRIOS ══════ -->
-  <div id="page-usuarios" class="page">
-    <div class="page-header">
-      <div class="page-header-ico ico-blue">👥</div>
-      <div><div class="page-header-title">Usuários</div><div class="page-header-sub">Gerencie o acesso ao sistema</div></div>
-    </div>
-    <div class="card accent-blue">
-      <div class="card-title">Novo usuário</div>
-      <div class="field"><label>Nome completo</label><input type="text" id="new-user-nome" placeholder="Ex: João Silva" autocomplete="off"></div>
-      <div class="field"><label>Email</label><input type="email" id="new-user-login" placeholder="email@exemplo.com" autocomplete="off"></div>
-      <div class="field"><label>Senha inicial</label><input type="password" id="new-user-pass" placeholder="Mínimo 6 caracteres"></div>
-      <div class="field"><label>Nível de acesso</label>
-        <select id="new-user-nivel">
-          <option value="OPERADOR">🟢 Operador — apenas Saída e Estoque</option>
-          <option value="SUPERVISOR">🟡 Supervisor — Entrada, Saída, Estoque e Diário</option>
-          <option value="ADMIN">🔴 Admin — acesso total</option>
-        </select>
-      </div>
-      <button class="btn btn-blue btn-sm" id="btn-criar-usuario" style="width:auto;padding:10px 24px">+ CRIAR USUÁRIO</button>
-    </div>
-    <div class="card" style="padding:0;overflow:hidden">
-      <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
-        <div class="card-title" style="margin-bottom:0">Usuários cadastrados</div>
-      </div>
-      <div id="lista-usuarios" style="padding:0 16px"></div>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL EDITAR PRODUTO -->
+<!-- MODAIS -->
 <div class="modal-bg" id="edit-modal">
   <div class="modal-box">
     <div class="modal-head">
-      <div class="modal-title">✏️ Editar produto</div>
+      <div class="modal-title">Editar produto</div>
       <button class="modal-close" id="btn-modal-close">✕</button>
     </div>
     <div class="modal-code" id="edit-code-label"></div>
@@ -359,15 +954,14 @@
       <button class="btn btn-gold" style="flex:2" id="btn-modal-save">SALVAR</button>
     </div>
     <div class="divider"></div>
-    <button class="btn btn-ghost btn-sm" id="btn-ver-historico" style="width:100%">📜 Ver histórico deste produto</button>
+    <button class="btn btn-ghost btn-sm" id="btn-ver-historico" style="width:100%">📜 Ver histórico</button>
   </div>
 </div>
 
-<!-- MODAL CONFIRMAR SAÍDA -->
 <div class="modal-bg" id="confirm-modal" style="align-items:center">
   <div class="modal-box" style="border-radius:20px;max-width:380px;padding:28px 24px 32px">
     <div class="modal-head" style="margin-top:0">
-      <div class="modal-title">⚠️ Confirmar saída</div>
+      <div class="modal-title">Confirmar saída</div>
       <button class="modal-close" id="btn-confirm-close">✕</button>
     </div>
     <div class="confirm-product">
@@ -382,22 +976,20 @@
   </div>
 </div>
 
-<!-- MODAL HISTÓRICO -->
 <div class="modal-bg" id="hist-modal">
   <div class="modal-box">
     <div class="modal-head">
-      <div class="modal-title" id="hist-title">📜 Histórico</div>
+      <div class="modal-title" id="hist-title">Histórico</div>
       <button class="modal-close" id="btn-hist-close">✕</button>
     </div>
     <div id="hist-list"></div>
   </div>
 </div>
 
-<!-- MODAL TROCAR SENHA -->
 <div class="modal-bg" id="passwd-modal" style="align-items:center">
   <div class="modal-box" style="border-radius:20px;max-width:380px;padding:28px 24px 32px">
     <div class="modal-head" style="margin-top:0">
-      <div class="modal-title">🔑 Alterar senha</div>
+      <div class="modal-title">Alterar senha</div>
       <button class="modal-close" id="btn-passwd-close">✕</button>
     </div>
     <div id="passwd-user-label" style="font-size:12px;color:var(--muted);margin-bottom:16px"></div>
@@ -407,31 +999,1383 @@
   </div>
 </div>
 
+<!-- MENU "MAIS" -->
+<div id="mais-menu">
+  <div class="mais-item level-entrada" data-tab="entrada">
+    <span class="mi-ico">📥</span> Entrada
+  </div>
+  <div class="mais-item level-admin" data-tab="relatorio">
+    <span class="mi-ico">📊</span> Relatórios
+  </div>
+  <div class="mais-item level-admin" data-tab="usuarios">
+    <span class="mi-ico">👥</span> Usuários
+  </div>
+  <div class="mais-divider"></div>
+  <div class="mais-item mais-logout" id="btn-logout-mais">
+    <span class="mi-ico">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+    </span>
+    Sair
+  </div>
+</div>
+
+<!-- NAV INFERIOR -->
+<nav class="bottom-nav" id="main-nav">
+  <div class="bottom-nav-inner">
+    <div class="bn-item" data-tab="dashboard">
+      <div class="bn-ico-wrap">🏠</div>
+      <div class="bn-label">Início</div>
+    </div>
+    <div class="bn-item" data-tab="estoque">
+      <div class="bn-ico-wrap">🗂️</div>
+      <div class="bn-label">Estoque</div>
+      <div class="bn-badge" id="nav-badge-estoque"></div>
+    </div>
+    <div class="bn-item bn-saida" data-tab="saida">
+      <div class="bn-ico-wrap">📤</div>
+      <div class="bn-label">Saída</div>
+    </div>
+    <div class="bn-item" data-tab="diario">
+      <div class="bn-ico-wrap">📋</div>
+      <div class="bn-label">Diário</div>
+    </div>
+    <div class="bn-item" id="btn-mais">
+      <div class="bn-ico-wrap">•••</div>
+      <div class="bn-label">Mais</div>
+    </div>
+  </div>
+</nav>
+
 <div id="theme-btn">🌙</div>
 <div id="toast"></div>
 
+<script>
 
 
+// ══════════════════════════════════════════════════════════
+// FIREBASE CONFIG + INIT
+// ══════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "AIzaSyA-2SH_h57k24EKQXLjOkWsrs70tbSbFGE",
+  authDomain:        "depositorancho-43b21.firebaseapp.com",
+  databaseURL:       "https://depositorancho-43b21-default-rtdb.firebaseio.com",
+  projectId:         "depositorancho-43b21",
+  storageBucket:     "depositorancho-43b21.firebasestorage.app",
+  messagingSenderId: "883363350930",
+  appId:             "1:883363350930:web:3da976d452d26837ef994b"
+};
+firebase.initializeApp(firebaseConfig);
+const db   = firebase.database();
+const auth = firebase.auth();
 
-<!-- JS — ordem importa: config e state primeiro, utils antes dos módulos -->
-<script src="js/config.js"></script>
-<script src="js/state.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/tema.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/cache.js"></script>
-<script src="js/nav.js"></script>
-<script src="js/dashboard.js"></script>
-<script src="js/qr.js"></script>
-<script src="js/autocomplete.js"></script>
-<script src="js/entrada.js"></script>
-<script src="js/saida.js"></script>
-<script src="js/estoque.js"></script>
-<script src="js/modal_produto.js"></script>
-<script src="js/diario.js"></script>
-<script src="js/export.js"></script>
-<script src="js/relatorio.js"></script>
-<script src="js/usuarios.js"></script>
-<script src="js/events.js"></script>
+// App Check — só bloqueia requisições sem token válido do reCAPTCHA
+// O token é gerado automaticamente pelo Google no domínio autorizado
+const appCheck = firebase.appCheck();
+appCheck.activate(
+  new firebase.appCheck.ReCaptchaV3Provider('6Lc81NcsAAAAANKyCFJ-QrBnv-kBN0wlMa8E4dkw'),
+  true
+);
+
+// App Check — ativado só após registrar o app no Firebase Console → App Check → Apps
+// Descomente as linhas abaixo DEPOIS de registrar o app:
+// const appCheck = firebase.appCheck();
+// appCheck.activate(
+//   new firebase.appCheck.ReCaptchaV3Provider('6Lc81NcsAAAAANKyCFJ-QrBnv-kBN0wlMa8E4dkw'),
+//   true
+// );
+
+// ══════════════════════════════════════════════════════════
+// NÍVEIS  OPERADOR < SUPERVISOR < ADMIN
+// ══════════════════════════════════════════════════════════
+const NIVEL = { OPERADOR:1, SUPERVISOR:2, ADMIN:3 };
+function podeAcessar(n){ return (NIVEL[userLevel]||0) >= (NIVEL[n]||99); }
+
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+let userLevel   = null;
+let currentUser = null;   // { uid, email, displayName }
+let cache       = {};
+let cacheReady  = false;
+let cacheUnsub  = null;
+let usuariosCache = {}; // { email: nome }
+let qrInst={}, qrOn={};
+let acItems=[], acIdx=-1;
+let editCode=null;
+let relPeriod='semana';
+let estoqueTabAtual='lista';
+let confirmCallback=null;
+let passwdTargetUid=null;
+let darkMode = localStorage.getItem('tema') !== 'light';
+
+// ══════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════
+function dataLocal(d){
+  const dt=d||new Date();
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+}
+function diasVencer(v){
+  if(!v) return null;
+  const [y,m,d]=v.split('-').map(Number);
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  return Math.ceil((new Date(y,m-1,d)-hoje)/86400000);
+}
+function toast(msg,type){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='show '+(type||'ok');
+  clearTimeout(el._t); el._t=setTimeout(()=>el.className='',3400);
+}
+function saudacao(){
+  const h=new Date().getHours();
+  return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite';
+}
+function nivelLabel(nivel){
+  if(nivel==='ADMIN')      return '<span class="badge b-red">Admin</span>';
+  if(nivel==='SUPERVISOR') return '<span class="badge b-yellow">Supervisor</span>';
+  return '<span class="badge b-green">Operador</span>';
+}
+function barcodeVisual(code){
+  let x=0,bars='',seed=code.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+  const n=Math.max(code.length,8)*11,unit=160/n;
+  for(let i=0;i<n;i++){const w=unit*(1+((seed*(i+1)*7)%3));if(i%2===0)bars+=`<rect x="${x.toFixed(1)}" y="0" width="${w.toFixed(1)}" height="40" fill="#e8eaf0"/>`;x+=w;}
+  return `<svg viewBox="0 0 ${x.toFixed(0)} 40" xmlns="http://www.w3.org/2000/svg" style="background:#0d0f14;width:100%;height:50px">${bars}</svg>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// TEMA
+// ══════════════════════════════════════════════════════════
+if (!darkMode) document.body.classList.add('light');
+
+// ══════════════════════════════════════════════════════════
+// DOM READY — wire all events
+// ══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+
+  // Theme
+  document.getElementById('theme-btn').addEventListener('click', ()=>{
+    darkMode=!darkMode;
+    document.body.classList.toggle('light',!darkMode);
+    document.getElementById('theme-btn').textContent=darkMode?'🌙':'☀️';
+    localStorage.setItem('tema',darkMode?'dark':'light');
+  });
+
+  // Login / logout
+  document.getElementById('inp-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') login(); });
+  document.getElementById('btn-login').addEventListener('click', login);
+  document.getElementById('btn-forgot').addEventListener('click', ()=>{
+    const p=document.getElementById('reset-panel');
+    p.style.display = p.style.display==='none'||!p.style.display ? 'block' : 'none';
+  });
+
+  // Nav
+  document.querySelectorAll('.nav-item[data-tab]').forEach(el=>{
+    el.addEventListener('click',()=>switchTab(el.dataset.tab));
+  });
+
+  // Operações
+  document.getElementById('btn-entrada').addEventListener('click',()=>processar('ENTRADA'));
+  document.getElementById('btn-saida').addEventListener('click',()=>processarSaida());
+
+  // QR
+  document.getElementById('qr-toggle-entrada').addEventListener('click',()=>toggleQR('entrada'));
+  document.getElementById('qr-toggle-saida').addEventListener('click',()=>toggleQR('saida'));
+
+  // Autocomplete
+  const saiBusca=document.getElementById('sai-busca');
+  saiBusca.addEventListener('input',onSaiBuscaInput);
+  saiBusca.addEventListener('keydown',onSaiBuscaKeydown);
+  saiBusca.addEventListener('blur',()=>setTimeout(()=>{document.getElementById('ac-list').style.display='none';},180));
+
+  // Estoque
+  document.getElementById('filtro-estoque').addEventListener('input',renderEstoque);
+  document.querySelectorAll('.tab-btn[data-estoque-tab]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      switchEstoqueTab(btn.dataset.estoqueTab);
+    });
+  });
+
+  // Export CSV
+  document.getElementById('btn-export-csv').addEventListener('click',exportarEstoqueCSV);
+  document.getElementById('btn-export-diario').addEventListener('click',exportarDiarioXLSX);
+  document.getElementById('btn-export-completo').addEventListener('click',exportarBackupCompleto);
+
+  // Diário
+  document.getElementById('data-diario').addEventListener('change',renderDiario);
+
+  // Relatório período
+  document.querySelectorAll('.pt[data-period]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      relPeriod=btn.dataset.period;
+      document.querySelectorAll('.pt').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderRelatorio();
+    });
+  });
+
+  // Modal editar produto
+  document.getElementById('btn-modal-close').addEventListener('click',fecharModal);
+  document.getElementById('btn-modal-cancel').addEventListener('click',fecharModal);
+  document.getElementById('btn-modal-save').addEventListener('click',salvarEdicao);
+  document.getElementById('edit-modal').addEventListener('click',e=>{if(e.target===document.getElementById('edit-modal'))fecharModal();});
+  document.getElementById('btn-ver-historico').addEventListener('click',()=>{if(editCode)abrirHistorico(editCode);});
+
+  // Delegação edit btn nas tabelas
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest('[data-edit-code]');
+    if(btn) abrirEditar(btn.dataset.editCode);
+  });
+
+  // Modal confirmar saída
+  document.getElementById('btn-confirm-close').addEventListener('click',fecharConfirm);
+  document.getElementById('btn-confirm-cancel').addEventListener('click',fecharConfirm);
+  document.getElementById('btn-confirm-ok').addEventListener('click',()=>{ const fn=confirmCallback; fecharConfirm(); if(fn) fn(); });
+  document.getElementById('confirm-modal').addEventListener('click',e=>{if(e.target===document.getElementById('confirm-modal'))fecharConfirm();});
+
+  // Modal histórico
+  document.getElementById('btn-hist-close').addEventListener('click',()=>document.getElementById('hist-modal').classList.remove('open'));
+  document.getElementById('hist-modal').addEventListener('click',e=>{if(e.target===document.getElementById('hist-modal'))document.getElementById('hist-modal').classList.remove('open');});
+
+  // Modal resetar senha
+  document.getElementById('btn-passwd-close').addEventListener('click',()=>document.getElementById('passwd-modal').classList.remove('open'));
+  document.getElementById('passwd-modal').addEventListener('click',e=>{if(e.target===document.getElementById('passwd-modal'))document.getElementById('passwd-modal').classList.remove('open');});
+  document.getElementById('btn-passwd-save').addEventListener('click',salvarSenhaAdmin);
+
+  // Usuários
+  document.getElementById('btn-criar-usuario').addEventListener('click',criarUsuario);
+
+  // Timeout de inatividade — logout automático após 8h
+  let inactivityTimer;
+  function resetTimer(){
+    clearTimeout(inactivityTimer);
+    inactivityTimer=setTimeout(()=>{
+      toast('Sessão encerrada por inatividade.','warn');
+      setTimeout(()=>auth.signOut(),2000);
+    }, 8*60*60*1000);
+  }
+  ['click','keydown','touchstart'].forEach(e=>document.addEventListener(e,resetTimer,{passive:true}));
+  resetTimer();
+
+  // ── Menu "Mais" ──
+  const maisBtn = document.getElementById('btn-mais');
+  const maisMenu = document.getElementById('mais-menu');
+
+  maisBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = maisMenu.style.display === 'block';
+    maisMenu.style.display = open ? 'none' : 'block';
+    maisBtn.classList.toggle('active', !open);
+  });
+
+  document.querySelectorAll('#mais-menu .mais-item[data-tab]').forEach(el => {
+    el.addEventListener('click', () => {
+      maisMenu.style.display = 'none';
+      maisBtn.classList.remove('active');
+      switchTab(el.dataset.tab);
+    });
+  });
+
+  document.getElementById('btn-logout-mais').addEventListener('click', () => {
+    maisMenu.style.display = 'none';
+    auth.signOut().then(() => {
+      document.getElementById('inp-email').value = '';
+      document.getElementById('inp-pass').value  = '';
+      document.getElementById('login-error').style.display = 'none';
+      document.getElementById('reset-panel').style.display = 'none';
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#mais-menu') && !e.target.closest('#btn-mais')) {
+      maisMenu.style.display = 'none';
+      maisBtn.classList.remove('active');
+    }
+  });
+
+  // ── Offline detection ──
+  function updateOnlineStatus() {
+    const banner = document.getElementById('offline-banner');
+    if (!navigator.onLine) {
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+  window.addEventListener('online',  updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+  updateOnlineStatus();
+
+  // ── Service Worker ──
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => {
+        console.log('[SW] Registrado:', reg.scope);
+        // Verifica atualizações
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              toast('🔄 Atualização disponível — recarregue o app.', 'warn');
+            }
+          });
+        });
+      })
+      .catch(err => console.warn('[SW] Erro:', err));
+  }
+});
+
+// ══════════════════════════════════════════════════════════
+// FIREBASE AUTH — observer (único ponto de entrada)
+// ══════════════════════════════════════════════════════════
+// Timeout de segurança — se Firebase não responder em 10s, mostra login
+const authTimeout = setTimeout(() => {
+  const loading = document.getElementById('auth-loading');
+  if (loading && loading.style.display !== 'none') {
+    loading.style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+}, 10000);
+
+// Flag para processar o observer só uma vez
+let authResolved = false;
+
+// Aguarda token do App Check antes de iniciar o observer de auth
+appCheck.getToken(true)
+  .catch(() => {}) // Se falhar, continua mesmo assim
+  .finally(() => {
+
+auth.onAuthStateChanged(async firebaseUser => {
+  // Ignora disparos do secondary app (criarUsuario/resetSenha)
+  // e disparos repetidos após já ter resolvido
+  if (authResolved && firebaseUser && currentUser) return;
+  if (authResolved && !firebaseUser) {
+    // Logout real — limpa tudo
+    authResolved = false;
+  }
+
+  clearTimeout(authTimeout);
+  const loading = document.getElementById('auth-loading');
+  const loginScreen = document.getElementById('login-screen');
+
+  if (!firebaseUser) {
+    // Não autenticado — mostra login
+    loading.style.display = 'none';
+    loginScreen.style.display = 'flex';
+    document.getElementById('main-nav').style.display = 'none';
+    document.getElementById('mais-menu').style.display = 'none';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('theme-btn').style.display = 'none';
+    // Limpa cache ao deslogar
+    if (cacheUnsub) { cacheUnsub(); cacheUnsub=null; }
+    cache={};  cacheReady=false;
+    userLevel=null; currentUser=null;
+    return;
+  }
+
+  // Autenticado — busca perfil no Realtime DB (uid como chave)
+  try {
+    const snap = await db.ref('config/usuarios/'+firebaseUser.uid).once('value');
+    const perfil = snap.val();
+
+    if (!perfil || perfil.ativo === false) {
+      // Usuário não tem perfil ou foi inativado — nega acesso
+      await auth.signOut();
+      mostrarErroLogin('Acesso negado. Conta inativa ou não cadastrada.');
+      return;
+    }
+
+    userLevel  = perfil.nivel || 'OPERADOR';
+    currentUser = {
+      uid:   firebaseUser.uid,
+      email: firebaseUser.email,
+      nome:  perfil.nome || firebaseUser.email.split('@')[0],
+      nomeCompleto: perfil.nome || firebaseUser.email.split('@')[0]
+    };
+
+    // Registra login na auditoria
+    db.ref('auditoria/login_ok').push({
+      uid: currentUser.uid, email: currentUser.email,
+      nivel: userLevel, ts: Date.now()
+    });
+
+    // Mostra app
+    loading.style.display = 'none';
+    loginScreen.style.display = 'none';
+    document.getElementById('main-nav').style.display = 'block';
+    document.getElementById('app').style.display = 'block';
+    const tb = document.getElementById('theme-btn');
+    tb.style.display = 'flex';
+    tb.textContent = darkMode ? '🌙' : '☀️';
+
+    authResolved = true;
+    aplicarNivel();
+    carregarCache();
+    switchTab(userLevel === 'OPERADOR' ? 'saida' : 'dashboard');
+
+  } catch(err) {
+    console.error('Auth state error:', err);
+    await auth.signOut();
+    mostrarErroLogin('Erro ao verificar perfil: '+err.message);
+  }
+});
+}); // fim appCheck.getToken
+
+// ══════════════════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════════════════
+let loginAttempts = 0;
+let loginBloqueado = false;
+
+function mostrarErroLogin(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('auth-loading').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function login() {
+  if (loginBloqueado) { toast('Aguarde antes de tentar novamente.','err'); return; }
+
+  const email = document.getElementById('inp-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('inp-pass').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+
+  if (!email || !pass) return;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errEl.textContent = 'Email inválido.'; errEl.style.display='block'; return;
+  }
+
+  // Mostra spinner durante autenticação
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('auth-loading').style.display = 'flex';
+
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(() => { loginAttempts = 0; })
+    .catch(err => {
+      loginAttempts++;
+      if (loginAttempts >= 5) {
+        loginBloqueado = true;
+        setTimeout(()=>{ loginBloqueado=false; loginAttempts=0; }, 30000);
+        mostrarErroLogin('Bloqueado por 30s após 5 tentativas.');
+      } else {
+        const msg = err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found'
+          ? `Email ou senha incorretos. (${loginAttempts}/5)`
+          : 'Erro: ' + err.message;
+        mostrarErroLogin(msg);
+      }
+      // Auditoria de tentativa falha
+      db.ref('auditoria/login_falha').push({ email, ts: Date.now(), tentativa: loginAttempts });
+    });
+}
+
+// ══════════════════════════════════════════════════════════
+// NÍVEL DE ACESSO
+// ══════════════════════════════════════════════════════════
+function aplicarNivel() {
+  document.querySelectorAll('.level-entrada').forEach(el=>{
+    el.style.display = podeAcessar('SUPERVISOR') ? '' : 'none';
+  });
+  document.querySelectorAll('.level-admin').forEach(el=>{
+    el.style.display = podeAcessar('ADMIN') ? '' : 'none';
+  });
+
+  if (userLevel === 'OPERADOR') {
+    document.body.classList.add('modo-operador');
+    // Esconde itens do menu Mais e nav para operador
+    document.querySelectorAll('.bn-item[data-tab]').forEach(el => {
+      if (el.dataset.tab !== 'saida') el.style.display = 'none';
+    });
+    // Esconde dashboard e diário do operador
+    document.getElementById('btn-mais').style.display = 'none';
+  } else {
+    document.body.classList.remove('modo-operador');
+    const dataField = document.getElementById('sai-data-field');
+    if (dataField) dataField.style.display = '';
+    const obsRequired = document.getElementById('sai-obs-required');
+    if (obsRequired) obsRequired.style.display = 'none';
+  }
+  // Aplica visibilidade dos itens level-admin e level-entrada no menu Mais
+  document.querySelectorAll('.level-entrada').forEach(el => {
+    el.style.display = podeAcessar('SUPERVISOR') ? '' : 'none';
+  });
+  document.querySelectorAll('.level-admin').forEach(el => {
+    el.style.display = podeAcessar('ADMIN') ? '' : 'none';
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// CACHE REALTIME
+// ══════════════════════════════════════════════════════════
+function carregarCache() {
+  // Carrega nomes dos usuários para exibir no diário
+  db.ref('config/usuarios').once('value').then(snap => {
+    snap.forEach(u => {
+      const v = u.val();
+      if (v && v.email) usuariosCache[v.email] = v.nome || v.email.split('@')[0];
+    });
+  });
+
+  if (cacheUnsub) cacheUnsub();
+  const ref = db.ref('estoque');
+  const handler = snap => {
+    cache = {};
+    snap.forEach(c => {
+      const v=c.val(); if(!v) return;
+      cache[c.key] = {
+        nome:    v.nome    || c.key,
+        saldo:   Number(v.saldo)   || 0,
+        setor:   v.setor   || 'SECO',
+        validade:v.validade|| '',
+        unidade: v.unidade || 'un',
+        minimo:  Number(v.minimo)  || 0
+      };
+    });
+    cacheReady = true;
+    atualizarBadgeNav();
+    if (document.getElementById('page-estoque').classList.contains('active'))   renderEstoque();
+    if (document.getElementById('page-relatorio').classList.contains('active')) renderRelatorio();
+    if (document.getElementById('page-dashboard').classList.contains('active')) renderDashboard();
+  };
+  ref.on('value', handler, err=>{ console.error('[Cache]',err); toast('Erro Firebase: '+err.code,'err'); });
+  cacheUnsub = () => ref.off('value', handler);
+}
+
+// ══════════════════════════════════════════════════════════
+// BADGE ALERTA NAV
+// ══════════════════════════════════════════════════════════
+function atualizarBadgeNav() {
+  const temAlerta = Object.values(cache).some(i=>{
+    const d=diasVencer(i.validade);
+    return (d!==null&&d<=7) || (i.minimo>0&&i.saldo<i.minimo);
+  });
+  document.getElementById('nav-badge-estoque').style.display = temAlerta ? 'block' : 'none';
+}
+
+// ══════════════════════════════════════════════════════════
+// NAVEGAÇÃO
+// ══════════════════════════════════════════════════════════
+async function switchTab(tab) {
+  // Operador só pode acessar saida
+  if (userLevel === 'OPERADOR' && tab !== 'saida') {
+    toast('Acesso não autorizado.','err'); return;
+  }
+  const permMap = { entrada:'SUPERVISOR', diario:'SUPERVISOR', relatorio:'ADMIN', usuarios:'ADMIN' };
+  if (permMap[tab] && !podeAcessar(permMap[tab])) { toast('Acesso não autorizado.','err'); return; }
+
+  for (const k of Object.keys(qrInst)) {
+    if (qrOn[k]) {
+      await qrInst[k].stop().catch(()=>{});
+      qrOn[k]=false;
+      document.getElementById('qr-wrap-'+k).style.display='none';
+      document.querySelector('#qr-toggle-'+k+' span').textContent='Usar câmera / QR Code';
+    }
+  }
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.bn-item[data-tab]').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  const navEl=document.querySelector(`.bn-item[data-tab="${tab}"]`);
+  if(navEl) navEl.classList.add('active');
+  // Fecha menu "Mais" ao navegar
+  document.getElementById('mais-menu').style.display='none';
+
+  if(tab==='dashboard') renderDashboard();
+  if(tab==='estoque')   renderEstoque();
+  if(tab==='diario')    { document.getElementById('data-diario').value=dataLocal(); renderDiario(); }
+  if(tab==='relatorio') renderRelatorio();
+  if(tab==='usuarios')  renderUsuarios();
+  if(tab==='saida') {
+    // Atualiza label com data atual
+    const labelEl = document.getElementById('sai-data-label');
+    if (labelEl) {
+      const hoje = new Date();
+      labelEl.textContent = hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    }
+    // Esconde recibo ao abrir a aba
+    fecharRecibo();
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════
+function renderDashboard() {
+  const itens = Object.values(cache);
+  const nomeExibir = currentUser ? (currentUser.nome || currentUser.email.split('@')[0]) : '';
+  document.getElementById('dash-greeting').textContent = saudacao()+', '+nomeExibir+'!';
+  document.getElementById('dash-user-label').textContent =
+    (nivelLabel(userLevel).replace(/<[^>]+>/g,'')) + ' · ' +
+    new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+
+  const vencendo = itens.filter(i=>{ const d=diasVencer(i.validade); return d!==null&&d<=7; });
+  const alertDiv = document.getElementById('dash-alert');
+  if (vencendo.length) {
+    alertDiv.style.display='block';
+    document.getElementById('dash-alert-list').innerHTML =
+      vencendo.sort((a,b)=>diasVencer(a.validade)-diasVencer(b.validade)).slice(0,5).map(i=>{
+        const d=diasVencer(i.validade);
+        return `<div class="dash-alert-item"><span>${i.nome}</span><span style="font-size:11px;font-family:'JetBrains Mono',monospace">${d<=0?'VENCIDO':d+'d'}</span></div>`;
+      }).join('');
+  } else { alertDiv.style.display='none'; }
+
+  const baixo = itens.filter(i=>i.minimo>0&&i.saldo<i.minimo);
+  const lowDiv = document.getElementById('dash-low');
+  if (baixo.length) {
+    lowDiv.style.display='block';
+    document.getElementById('dash-low-list').innerHTML =
+      baixo.slice(0,5).map(i=>
+        `<div class="dash-alert-item"><span>${i.nome}</span><span style="font-size:11px;color:var(--amber);font-family:'JetBrains Mono',monospace">${i.saldo}/${i.minimo} ${i.unidade}</span></div>`
+      ).join('');
+  } else { lowDiv.style.display='none'; }
+
+  document.getElementById('dash-metrics').innerHTML=`
+    <div class="dash-box" onclick="switchTab('estoque')">
+      <div class="dl">Produtos</div><div class="dv">${itens.length}</div><div class="ds">cadastrados</div>
+    </div>
+    <div class="dash-box" onclick="switchTab('estoque')">
+      <div class="dl">Unidades</div><div class="dv gold">${itens.reduce((s,i)=>s+(i.saldo||0),0)}</div><div class="ds">em estoque</div>
+    </div>
+    <div class="dash-box" onclick="switchTab('estoque')">
+      <div class="dl">Vencendo</div><div class="dv ${vencendo.length>0?'red':''}">${vencendo.length}</div><div class="ds">em 7 dias</div>
+    </div>
+    <div class="dash-box" onclick="switchTab('estoque')">
+      <div class="dl">Estoque baixo</div><div class="dv ${baixo.length>0?'amber':''}">${baixo.length}</div><div class="ds">abaixo mínimo</div>
+    </div>`;
+
+  db.ref('logs/'+dataLocal()).once('value').then(snap=>{
+    const cont=document.getElementById('dash-recent');
+    if(!snap.exists()){ cont.innerHTML='<div class="empty">Nenhuma movimentação hoje.</div>'; return; }
+    const logs=[]; snap.forEach(l=>{ if(l.val()) logs.push(l.val()); }); logs.reverse();
+    cont.innerHTML=logs.slice(0,6).map(log=>{
+      const ent=log.tipo==='ENTRADA';
+      return `<div class="recent-log">
+        <div>
+          <div class="recent-log-nome">${ent?'📥':'📤'} ${log.nome||log.code}</div>
+          <div class="recent-log-hora">${log.hora||''} · ${log.usuario?(usuariosCache[log.usuario]||log.usuario.split('@')[0]):''}${log.obs?' · '+log.obs.substring(0,25):''}</div>
+        </div>
+        <span class="badge ${ent?'b-green':'b-red'}">${ent?'+':'-'}${log.qtd} ${log.unidade||'un'}</span>
+      </div>`;
+    }).join('')||'<div class="empty">Nenhuma movimentação hoje.</div>';
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// QR
+// ══════════════════════════════════════════════════════════
+async function toggleQR(key) {
+  const wrap=document.getElementById('qr-wrap-'+key);
+  const spanEl=document.querySelector('#qr-toggle-'+key+' span');
+  if(qrOn[key]){ await qrInst[key].stop().catch(()=>{}); qrOn[key]=false; wrap.style.display='none'; spanEl.textContent='Usar câmera / QR Code'; return; }
+  wrap.style.display='block'; spanEl.textContent='Fechar câmera';
+  if(!qrInst[key]) qrInst[key]=new Html5Qrcode('qr-reader-'+key);
+  qrInst[key].start({ facingMode:'environment' }, { fps:15, qrbox:{width:250,height:180} },
+    text=>{
+      if(key==='entrada'){ document.getElementById('ent-code').value=text; if(cache[text]){ document.getElementById('ent-nome').value=cache[text].nome; document.getElementById('ent-setor').value=cache[text].setor; } }
+      else { selecionarItem(text); }
+      qrInst[key].stop().catch(()=>{}); qrOn[key]=false; wrap.style.display='none'; spanEl.textContent='Usar câmera / QR Code';
+    }, ()=>{}
+  ).then(()=>qrOn[key]=true).catch(()=>{ toast('Câmera indisponível','err'); wrap.style.display='none'; });
+}
+
+// ══════════════════════════════════════════════════════════
+// AUTOCOMPLETE
+// ══════════════════════════════════════════════════════════
+function onSaiBuscaInput() {
+  const val=document.getElementById('sai-busca').value.trim().toLowerCase();
+  document.getElementById('sai-code').value='';
+  document.getElementById('sai-preview-box').style.display='none';
+  acIdx=-1;
+  if(!val){ document.getElementById('ac-list').style.display='none'; return; }
+  if(cacheReady){ buildAcList(val); return; }
+  const list=document.getElementById('ac-list');
+  list.innerHTML='<div class="ac-item" style="color:var(--muted);cursor:default">Carregando...</div>';
+  list.style.display='block';
+  db.ref('estoque').once('value').then(snap=>{
+    snap.forEach(c=>{ const v=c.val(); if(!v) return; cache[c.key]={nome:v.nome||c.key,saldo:Number(v.saldo)||0,setor:v.setor||'SECO',validade:v.validade||'',unidade:v.unidade||'un',minimo:Number(v.minimo)||0}; });
+    cacheReady=true;
+    const cur=document.getElementById('sai-busca').value.trim().toLowerCase();
+    if(cur) buildAcList(cur); else list.style.display='none';
+  }).catch(()=>toast('Erro ao buscar','err'));
+}
+
+function buildAcList(val) {
+  const list=document.getElementById('ac-list'); list.innerHTML='';
+  acItems=Object.entries(cache).filter(([code,item])=>
+    (item.nome||'').toLowerCase().includes(val)||(code||'').toLowerCase().includes(val)
+  ).sort((a,b)=>(a[1].nome||'').localeCompare(b[1].nome||'')).slice(0,10);
+  if(!acItems.length){
+    const el=document.createElement('div'); el.className='ac-item'; el.style.cssText='color:var(--muted);cursor:default'; el.textContent='Nenhum produto encontrado';
+    list.appendChild(el); list.style.display='block'; return;
+  }
+  acItems.forEach(([code,item])=>{
+    const el=document.createElement('div'); el.className='ac-item';
+    const left=document.createElement('div');
+    const n=document.createElement('div'); n.className='ac-name'; n.textContent=item.nome;
+    const c=document.createElement('div'); c.className='ac-code'; c.textContent=code;
+    left.append(n,c);
+    const badge=document.createElement('span'); badge.className='badge '+(item.saldo>0?'b-green':'b-red'); badge.textContent=item.saldo+' '+(item.unidade||'un');
+    el.append(left,badge);
+    el.addEventListener('mousedown',ev=>{ ev.preventDefault(); selecionarItem(code); });
+    list.appendChild(el);
+  });
+  list.style.display='block';
+}
+
+function onSaiBuscaKeydown(ev) {
+  const list=document.getElementById('ac-list');
+  const items=list.querySelectorAll('.ac-item');
+  if(!items.length||list.style.display==='none') return;
+  if(ev.key==='ArrowDown'){acIdx=Math.min(acIdx+1,items.length-1);ev.preventDefault();}
+  else if(ev.key==='ArrowUp'){acIdx=Math.max(acIdx-1,0);ev.preventDefault();}
+  else if(ev.key==='Enter'&&acIdx>=0){ev.preventDefault();if(acItems[acIdx])selecionarItem(acItems[acIdx][0]);return;}
+  else return;
+  items.forEach((el,i)=>el.classList.toggle('sel',i===acIdx));
+  items[acIdx]?.scrollIntoView({block:'nearest'});
+}
+
+function selecionarItem(code) {
+  const item=cache[code];
+  if(!item){ toast('Produto não encontrado','err'); return; }
+  document.getElementById('sai-code').value=code;
+  document.getElementById('sai-busca').value=item.nome;
+  document.getElementById('ac-list').style.display='none';
+  document.getElementById('sai-preview-box').style.display='block';
+  document.getElementById('prev-nome').textContent=item.nome;
+  document.getElementById('prev-saldo').textContent=item.saldo+' '+(item.unidade||'un')+' em estoque';
+  document.getElementById('prev-saldo').className='badge '+(item.saldo>0?'b-green':'b-red');
+  const dias=diasVencer(item.validade);
+  const vel=document.getElementById('prev-val');
+  vel.textContent=item.validade?'Val: '+item.validade:'Sem validade';
+  vel.className='badge '+(dias!==null&&dias<=7?'b-red':dias!==null&&dias<=30?'b-yellow':'b-gray');
+  const minEl=document.getElementById('prev-min');
+  if(item.minimo>0){ minEl.textContent='Mín: '+item.minimo+' '+item.unidade; minEl.style.display=''; } else { minEl.style.display='none'; }
+}
+
+// ══════════════════════════════════════════════════════════
+// PROCESSAR ENTRADA
+// ══════════════════════════════════════════════════════════
+function processar(tipo) {
+  if(!podeAcessar('SUPERVISOR')){ toast('Acesso negado.','err'); return; }
+  const qtd=parseFloat(document.getElementById('ent-qtd').value.replace(',','.'));
+  if(isNaN(qtd)||qtd<=0){ toast('Quantidade inválida.','err'); return; }
+  const code=document.getElementById('ent-code').value.trim();
+  const nome=document.getElementById('ent-nome').value.trim();
+  if(!code){ toast('Informe o código.','err'); return; }
+  if(!nome){ toast('Informe o nome.','err'); return; }
+  gravarMovimento('ENTRADA',code,{
+    nome, setor:document.getElementById('ent-setor').value,
+    validade:document.getElementById('ent-val').value,
+    unidade:document.getElementById('ent-unidade').value,
+    minimo:parseFloat(document.getElementById('ent-minimo').value)||0,
+    obs:document.getElementById('ent-obs').value.trim()
+  },qtd);
+}
+
+// ══════════════════════════════════════════════════════════
+// PROCESSAR SAÍDA (com modal de confirmação)
+// ══════════════════════════════════════════════════════════
+function processarSaida() {
+  const qtd=parseFloat(document.getElementById('sai-qtd').value.replace(',','.'));
+  if(isNaN(qtd)||qtd<=0){ toast('Quantidade inválida.','err'); return; }
+
+  let code=document.getElementById('sai-code').value.trim();
+  if(!code){
+    const busca=document.getElementById('sai-busca').value.trim().toLowerCase();
+    const found=Object.entries(cache).find(([k,v])=>k.toLowerCase()===busca||(v.nome&&v.nome.toLowerCase()===busca));
+    if(found){ code=found[0]; } else { toast('Selecione um produto da lista.','err'); if(busca&&cacheReady)buildAcList(busca); return; }
+  }
+
+  const item=cache[code];
+  if(!item){ toast('Produto não encontrado.','err'); return; }
+  if(item.saldo<qtd){ toast('Saldo insuficiente! Há apenas '+item.saldo+' '+item.unidade+'.','err'); return; }
+
+  const obs=document.getElementById('sai-obs').value.trim();
+
+  // Obs obrigatória para OPERADOR
+  if(userLevel==='OPERADOR' && !obs){
+    toast('Informe a finalidade da retirada.','err');
+    document.getElementById('sai-obs').focus();
+    return;
+  }
+
+  // Data: operador sempre usa hoje; supervisor/admin pode usar campo manual
+  let dataManual = null;
+  if(podeAcessar('SUPERVISOR')){
+    const manualField = document.getElementById('sai-data-manual');
+    dataManual = manualField ? manualField.value : null;
+  }
+
+  // Confirmação
+  document.getElementById('confirm-nome').textContent=item.nome;
+  document.getElementById('confirm-det').textContent=qtd+' '+item.unidade+' · Saldo: '+item.saldo+' '+item.unidade;
+  document.getElementById('confirm-msg').textContent=obs?'Finalidade: "'+obs+'"':'Confirme a saída deste produto.';
+  document.getElementById('confirm-modal').classList.add('open');
+
+  confirmCallback=()=>gravarMovimento('SAIDA',code,null,qtd,dataManual,obs,item);
+}
+
+function fecharConfirm(){ document.getElementById('confirm-modal').classList.remove('open'); confirmCallback=null; }
+
+// ══════════════════════════════════════════════════════════
+// GRAVAR MOVIMENTO
+// ══════════════════════════════════════════════════════════
+function gravarMovimento(tipo,code,dadosEntrada,qtd,dataManual=null,obs='',itemRef=null) {
+  if(!code||typeof code!=='string'||code.length>100){ toast('Código inválido.','err'); return; }
+  db.ref('estoque/'+code).once('value').then(snap=>{
+    const atual=snap.val();
+    if(tipo==='SAIDA'&&!atual){ toast('Produto não existe. Código: '+code,'err'); return; }
+    const base=atual||{nome:dadosEntrada.nome,saldo:0,setor:dadosEntrada.setor,validade:dadosEntrada.validade,unidade:dadosEntrada.unidade||'un',minimo:dadosEntrada.minimo||0};
+    const novoSaldo=tipo==='ENTRADA'?base.saldo+qtd:base.saldo-qtd;
+    if(novoSaldo<0){ toast('Saldo insuficiente!','err'); return; }
+    const novosDados={
+      nome:     tipo==='ENTRADA'?dadosEntrada.nome    :(base.nome||''),
+      saldo:    novoSaldo,
+      setor:    tipo==='ENTRADA'?dadosEntrada.setor   :(base.setor||'SECO'),
+      validade: tipo==='ENTRADA'?dadosEntrada.validade:(base.validade||''),
+      unidade:  tipo==='ENTRADA'?dadosEntrada.unidade :(base.unidade||'un'),
+      minimo:   tipo==='ENTRADA'?(dadosEntrada.minimo||0):(base.minimo||0)
+    };
+    const dataLog=dataManual||dataLocal();
+    const logEntry={
+      tipo, code, nome:novosDados.nome, qtd,
+      unidade:novosDados.unidade||'un',
+      hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      usuario: currentUser ? currentUser.email : 'desconhecido'
+    };
+    if(obs) logEntry.obs=obs;
+    const updates={};
+    updates['estoque/'+code]=novosDados;
+    updates['logs/'+dataLog+'/'+Date.now()]=logEntry;
+    db.ref().update(updates).then(()=>{
+      toast(tipo==='ENTRADA'?'✅ Entrada registrada!':'✅ Saída registrada!');
+      if(tipo==='SAIDA'&&novosDados.minimo>0&&novoSaldo<novosDados.minimo)
+        setTimeout(()=>toast('⚠️ '+novosDados.nome+' abaixo do mínimo!','warn'),600);
+      if(tipo==='ENTRADA'){
+        ['ent-code','ent-nome','ent-val','ent-obs'].forEach(id=>document.getElementById(id).value='');
+        document.getElementById('ent-qtd').value=1; document.getElementById('ent-unidade').value='un'; document.getElementById('ent-minimo').value=0;
+      } else {
+        ['sai-code','sai-busca','sai-obs'].forEach(id=>document.getElementById(id).value='');
+        const saiDataManual = document.getElementById('sai-data-manual');
+        if(saiDataManual) saiDataManual.value='';
+        document.getElementById('sai-qtd').value=1;
+        document.getElementById('sai-preview-box').style.display='none';
+        // Recibo para operador
+        if(userLevel==='OPERADOR') mostrarRecibo(novosDados.nome, qtd, novosDados.unidade, obs, novoSaldo);
+      }
+      if(document.getElementById('page-dashboard').classList.contains('active')) renderDashboard();
+    }).catch(err=>{ console.error(err); toast('Erro: '+(err.code||err.message),'err'); });
+  }).catch(err=>{ console.error(err); toast('Erro: '+(err.message||'Desconhecido'),'err'); });
+}
+
+// ══════════════════════════════════════════════════════════
+// ESTOQUE
+// ══════════════════════════════════════════════════════════
+function switchEstoqueTab(tab) {
+  estoqueTabAtual=tab;
+  ['lista','vencimentos','minimo','codigos'].forEach(t=>{ document.getElementById('tab-'+t).style.display=t===tab?'':'none'; });
+  renderEstoque();
+}
+
+function renderEstoque() {
+  if(!document.getElementById('page-estoque').classList.contains('active')) return;
+  const filtro=document.getElementById('filtro-estoque').value.trim().toLowerCase();
+  const itens=Object.entries(cache).filter(([code,item])=>!filtro||(item.nome||'').toLowerCase().includes(filtro)||code.toLowerCase().includes(filtro)).sort((a,b)=>(a[1].nome||'').localeCompare(b[1].nome||''));
+  const somaBar=document.getElementById('soma-bar');
+  if(filtro&&itens.length){
+    document.getElementById('soma-val').textContent=itens.reduce((s,[,i])=>s+(i.saldo||0),0);
+    document.getElementById('soma-sub').textContent=itens.length+' produto'+(itens.length!==1?'s':'');
+    somaBar.style.display='flex';
+  } else { somaBar.style.display='none'; }
+  if(estoqueTabAtual==='lista') renderLista(itens);
+  else if(estoqueTabAtual==='vencimentos') renderVencimentos(itens);
+  else if(estoqueTabAtual==='minimo') renderMinimo(itens);
+  else renderCodigos(itens);
+}
+
+function renderLista(itens) {
+  const frigo=document.getElementById('tbody-frigo'), secos=document.getElementById('tbody-secos');
+  frigo.innerHTML=''; secos.innerHTML='';
+  itens.forEach(([code,item])=>{
+    const dias=diasVencer(item.validade);
+    const vc=dias!==null&&dias<=7?'venc':dias!==null&&dias<=30?'venc-soon':'';
+    const baixo=item.minimo>0&&item.saldo<item.minimo;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><div style="display:flex;align-items:center;gap:8px"><div><b>${item.nome}</b>${baixo?` <span class="badge b-yellow" style="font-size:9px;padding:2px 6px">BAIXO</span>`:''}<div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace">${code}</div></div><button class="btn-edit" data-edit-code="${code}" title="Editar">✏️</button></div></td><td style="text-align:center"><span class="badge ${item.saldo>0?'b-green':'b-red'}">${item.saldo} ${item.unidade||'un'}</span></td><td class="${vc}">${item.validade||'—'}</td>`;
+    (item.setor==='FRIGORIFICO'?frigo:secos).appendChild(tr);
+  });
+  if(!frigo.children.length) frigo.innerHTML='<tr><td colspan="3" class="empty">Vazio</td></tr>';
+  if(!secos.children.length) secos.innerHTML='<tr><td colspan="3" class="empty">Vazio</td></tr>';
+}
+
+function renderVencimentos(itens) {
+  const crit=document.getElementById('tbody-venc-crit'), aviso=document.getElementById('tbody-venc-aviso');
+  crit.innerHTML=''; aviso.innerHTML='';
+  itens.forEach(([,item])=>{
+    if(!item.validade) return; const dias=diasVencer(item.validade); if(dias===null||dias>30) return;
+    const row=`<tr><td><b>${item.nome}</b></td><td>${item.setor==='FRIGORIFICO'?'🥩':'📦'}</td><td class="${dias<=7?'venc':'venc-soon'}">${item.validade} (${dias<=0?'VENCIDO':dias+'d'})</td><td style="text-align:center">${item.saldo} ${item.unidade||'un'}</td></tr>`;
+    (dias<=7?crit:aviso).innerHTML+=row;
+  });
+  if(!crit.innerHTML) crit.innerHTML='<tr><td colspan="4" class="empty">✅ Nenhum crítico</td></tr>';
+  if(!aviso.innerHTML) aviso.innerHTML='<tr><td colspan="4" class="empty">✅ Nenhum aviso</td></tr>';
+}
+
+function renderMinimo(itens) {
+  const tbody=document.getElementById('tbody-minimo'); tbody.innerHTML='';
+  const comMinimo=itens.filter(([,i])=>i.minimo>0).sort((a,b)=>a[1].saldo/a[1].minimo-b[1].saldo/b[1].minimo);
+  if(!comMinimo.length){ tbody.innerHTML='<tr><td colspan="4" class="empty">Nenhum produto com mínimo definido.</td></tr>'; return; }
+  comMinimo.forEach(([,item])=>{
+    const ok=item.saldo>=item.minimo, pct=Math.min((item.saldo/item.minimo*100),100).toFixed(0);
+    tbody.innerHTML+=`<tr><td><b>${item.nome}</b></td><td style="text-align:center"><span class="badge ${ok?'b-green':'b-red'}">${item.saldo} ${item.unidade||'un'}</span></td><td style="text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px">${item.minimo} ${item.unidade||'un'}</td><td style="text-align:center"><div style="background:var(--border);border-radius:4px;height:6px;width:60px;display:inline-block;overflow:hidden"><div style="height:100%;width:${pct}%;background:${ok?'var(--green)':'var(--red)'};border-radius:4px"></div></div><div style="font-size:10px;color:${ok?'var(--green)':'var(--red)'};margin-top:2px;font-family:'JetBrains Mono',monospace">${pct}%</div></td></tr>`;
+  });
+}
+
+function renderCodigos(itens) {
+  const grid=document.getElementById('bc-grid');
+  if(!itens.length){ grid.innerHTML='<div class="empty">🏷️ Nenhum produto</div>'; return; }
+  grid.innerHTML=itens.map(([code,item])=>`<div class="bc-card"><div class="bc-nome">${item.nome}</div><div class="bc-code">${code}</div>${barcodeVisual(code)}<div class="bc-saldo">Saldo: <b>${item.saldo} ${item.unidade||'un'}</b> | ${item.setor==='FRIGORIFICO'?'🥩':'📦'}</div></div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// MODAL EDITAR PRODUTO
+// ══════════════════════════════════════════════════════════
+function abrirEditar(code) {
+  const item=cache[code]; if(!item){ toast('Item não encontrado.','err'); return; }
+  editCode=code;
+  document.getElementById('edit-code-label').textContent='Código: '+code;
+  document.getElementById('edit-nome').value=item.nome||'';
+  document.getElementById('edit-val').value=item.validade||'';
+  document.getElementById('edit-setor').value=item.setor||'SECO';
+  document.getElementById('edit-unidade').value=item.unidade||'un';
+  document.getElementById('edit-saldo').value=item.saldo||0;
+  document.getElementById('edit-minimo').value=item.minimo||0;
+  document.getElementById('edit-modal').classList.add('open');
+}
+function fecharModal(){ document.getElementById('edit-modal').classList.remove('open'); editCode=null; }
+function salvarEdicao() {
+  if(!editCode) return;
+  const nome=document.getElementById('edit-nome').value.trim();
+  const validade=document.getElementById('edit-val').value;
+  const setor=document.getElementById('edit-setor').value;
+  const unidade=document.getElementById('edit-unidade').value;
+  const saldo=parseFloat(document.getElementById('edit-saldo').value.replace(',','.'));
+  const minimo=parseFloat(document.getElementById('edit-minimo').value)||0;
+  if(!nome){ toast('Nome obrigatório.','err'); return; }
+  if(isNaN(saldo)||saldo<0){ toast('Quantidade inválida.','err'); return; }
+  db.ref('estoque/'+editCode).update({nome,validade,setor,unidade,saldo,minimo})
+    .then(()=>{
+      toast('✅ Produto atualizado!'); fecharModal();
+      db.ref('auditoria/edicoes').push({code:editCode,usuario:currentUser?currentUser.email:'',ts:Date.now(),dados:{nome,validade,setor,unidade,saldo,minimo}});
+    }).catch(err=>toast('Erro: '+err.code,'err'));
+}
+
+// ══════════════════════════════════════════════════════════
+// HISTÓRICO DO PRODUTO
+// ══════════════════════════════════════════════════════════
+async function abrirHistorico(code) {
+  const item=cache[code];
+  document.getElementById('hist-title').textContent='📜 Histórico — '+(item?item.nome:code);
+  document.getElementById('hist-list').innerHTML='<div class="empty">⏳ Carregando...</div>';
+  document.getElementById('hist-modal').classList.add('open');
+  const proms=[];
+  for(let i=0;i<30;i++){ const d=new Date(); d.setDate(d.getDate()-i); proms.push(db.ref('logs/'+dataLocal(d)).orderByChild('code').equalTo(code).once('value')); }
+  const snaps=await Promise.all(proms);
+  const logs=[];
+  snaps.forEach(s=>s.forEach(l=>{ const v=l.val(); if(v) logs.push(v); }));
+  if(!logs.length){ document.getElementById('hist-list').innerHTML='<div class="empty">Sem movimentações nos últimos 30 dias.</div>'; return; }
+  document.getElementById('hist-list').innerHTML=logs.map(log=>{
+    const ent=log.tipo==='ENTRADA';
+    return `<div class="hist-item"><div><div style="font-size:13px;font-weight:600">${ent?'📥 Entrada':'📤 Saída'}</div><div class="hist-meta">${log.hora||''} · ${log.usuario||''}</div>${log.obs?`<div style="font-size:11px;color:var(--muted);margin-top:2px">💬 ${log.obs}</div>`:''}</div><div class="hist-qty" style="color:${ent?'var(--green)':'var(--red)'}">${ent?'+':'-'}${log.qtd} ${log.unidade||'un'}</div></div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// DIÁRIO
+// ══════════════════════════════════════════════════════════
+let diarioSnap=null;
+function renderDiario() {
+  const data=document.getElementById('data-diario').value;
+  const cont=document.getElementById('lista-diario'), tots=document.getElementById('diario-totais');
+  cont.innerHTML='<div class="empty">⏳ Carregando...</div>';
+  db.ref('logs/'+data).once('value').then(snap=>{
+    diarioSnap=snap; cont.innerHTML=''; tots.innerHTML='';
+    if(!snap.exists()){ cont.innerHTML='<div class="empty">📭 Nenhuma movimentação.</div>'; return; }
+    let tE=0,tS=0; const logs=[]; snap.forEach(l=>{ if(l.val()) logs.push(l.val()); }); logs.reverse();
+    logs.forEach(log=>{
+      const ent=log.tipo==='ENTRADA'; ent?tE+=log.qtd:tS+=log.qtd;
+      const unidLog=(cache[log.code]&&cache[log.code].unidade)?cache[log.code].unidade:(log.unidade||'un');
+      const el=document.createElement('div'); el.className='log-card';
+      el.innerHTML=`<div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">${ent?'📥':'📤'}</span><div><div class="log-nome">${log.nome||log.code}</div><div class="log-hora">${log.hora||''} ${log.usuario ? '· ' + (usuariosCache[log.usuario] || log.usuario.split('@')[0]) : ''}</div>${log.obs?`<div class="log-obs">💬 ${log.obs}</div>`:''}</div></div><div style="text-align:right"><div class="log-qty" style="color:${ent?'var(--green)':'var(--red)'}">${ent?'+':'-'}${log.qtd}</div><div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px">${unidLog}</div></div>`;
+      cont.appendChild(el);
+    });
+    tots.innerHTML=`<div style="flex:1;background:var(--green-dim);border:1px solid var(--green);border-radius:10px;padding:10px 14px"><div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase">Entradas</div><div style="font-size:22px;font-weight:900;color:var(--green);font-family:'JetBrains Mono',monospace">+${tE}</div></div><div style="flex:1;background:var(--red-dim);border:1px solid var(--red);border-radius:10px;padding:10px 14px"><div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase">Saídas</div><div style="font-size:22px;font-weight:900;color:var(--red);font-family:'JetBrains Mono',monospace">-${tS}</div></div>`;
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// EXPORT CSV
+// ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// EXPORTS — CSV e XLSX
+// ══════════════════════════════════════════════════════════
+
+function exportarEstoqueCSV() {
+  const rows=[['Código','Nome','Setor','Saldo','Unidade','Validade','Mínimo']];
+  Object.entries(cache).sort((a,b)=>(a[1].nome||'').localeCompare(b[1].nome||'')).forEach(([code,item])=>{
+    rows.push([code,item.nome,item.setor,item.saldo,item.unidade||'un',item.validade||'',item.minimo||0]);
+  });
+  baixarCSV(rows,'estoque_'+dataLocal()+'.csv');
+}
+
+function baixarCSV(rows,filename) {
+  const BOM='\uFEFF';
+  const csv=BOM+rows.map(r=>r.map(cel=>'"'+String(cel).replace(/"/g,'""')+'"').join(';')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=filename; a.click();
+  URL.revokeObjectURL(url);
+  toast('\u{1F4E5} Exportado!');
+}
+
+function xlsxHeaderStyle(){
+  return { font:{bold:true,color:{rgb:'FFFFFFFF'}}, fill:{fgColor:{rgb:'FF1a201a'}}, alignment:{horizontal:'center'} };
+}
+
+function aplicarEstiloAba(ws, headers) {
+  ws['!cols'] = headers.map(h=>({wch:Math.max(h.length+4,14)}));
+  headers.forEach((_,ci)=>{
+    const addr=XLSX.utils.encode_cell({r:0,c:ci});
+    if(ws[addr]) ws[addr].s = xlsxHeaderStyle();
+  });
+}
+
+function exportarDiarioXLSX() {
+  if(!diarioSnap||!diarioSnap.exists()){ toast('Nenhum dado para exportar.','warn'); return; }
+  const data=document.getElementById('data-diario').value;
+  const headers=['Hora','Tipo','Produto','Código','Qtd','Unidade','Usuário','Finalidade'];
+  const rows=[];
+  diarioSnap.forEach(l=>{
+    const v=l.val(); if(!v) return;
+    const nomeUser=usuariosCache[v.usuario]||(v.usuario?v.usuario.split('@')[0]:'');
+    rows.push([v.hora||'',v.tipo,v.nome||'',v.code||'',v.qtd,v.unidade||'un',nomeUser,v.obs||'']);
+  });
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  aplicarEstiloAba(ws,headers);
+  const [y,m,d]=data.split('-');
+  XLSX.utils.book_append_sheet(wb,ws,d+'.'+m+'.'+y);
+  XLSX.writeFile(wb,'diario_'+data+'.xlsx');
+  toast('📥 XLSX exportado!');
+}
+
+async function exportarBackupCompleto() {
+  if(!podeAcessar('ADMIN')){ toast('Acesso negado.','err'); return; }
+  toast('⏳ Gerando backup — aguarde...','warn');
+
+  const wb=XLSX.utils.book_new();
+
+  // Aba 1 — Estoque atual
+  const estoqueHeaders=['Código','Nome','Setor','Saldo','Unidade','Validade','Mínimo'];
+  const estoqueRows=Object.entries(cache).sort((a,b)=>(a[1].nome||'').localeCompare(b[1].nome||'')).map(([code,item])=>[code,item.nome,item.setor,item.saldo,item.unidade||'un',item.validade||'',item.minimo||0]);
+  const wsEstoque=XLSX.utils.aoa_to_sheet([estoqueHeaders,...estoqueRows]);
+  aplicarEstiloAba(wsEstoque,estoqueHeaders);
+  XLSX.utils.book_append_sheet(wb,wsEstoque,'Estoque Atual');
+
+  // Coleta logs de 365 dias
+  const logHeaders=['Hora','Tipo','Produto','Código','Qtd','Unidade','Usuário','Finalidade'];
+  const diasPorData={};
+  const proms=[];
+  for(let i=0;i<365;i++){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const key=dataLocal(d);
+    proms.push(db.ref('logs/'+key).once('value').then(snap=>({key,snap})));
+  }
+  const results=await Promise.all(proms);
+  results.forEach(({key,snap})=>{
+    if(!snap.exists()) return;
+    const rows=[];
+    snap.forEach(l=>{
+      const v=l.val(); if(!v) return;
+      const nomeUser=usuariosCache[v.usuario]||(v.usuario?v.usuario.split('@')[0]:'');
+      rows.push([v.hora||'',v.tipo,v.nome||'',v.code||'',v.qtd,v.unidade||'un',nomeUser,v.obs||'']);
+    });
+    if(rows.length) diasPorData[key]=rows;
+  });
+
+  // Uma aba por data
+  const datas=Object.keys(diasPorData).sort().reverse();
+  datas.forEach(data=>{
+    const ws=XLSX.utils.aoa_to_sheet([logHeaders,...diasPorData[data]]);
+    aplicarEstiloAba(ws,logHeaders);
+    const [y,m,d]=data.split('-');
+    XLSX.utils.book_append_sheet(wb,ws,d+'.'+m+'.'+y);
+  });
+
+  // Aba resumo de saídas
+  const resumoHeaders=['Produto','Total Saído','Unidade','Dias c/ Movimentação'];
+  const resumoMap={};
+  datas.forEach(data=>{
+    diasPorData[data].forEach(row=>{
+      if(row[1]!=='SAIDA') return;
+      const nome=row[2], unid=row[5];
+      if(!resumoMap[nome]) resumoMap[nome]={qtd:0,unidade:unid,dias:new Set()};
+      resumoMap[nome].qtd+=Number(row[4])||0;
+      resumoMap[nome].dias.add(data);
+    });
+  });
+  const resumoRows=Object.entries(resumoMap).sort((a,b)=>b[1].qtd-a[1].qtd).map(([nome,v])=>[nome,v.qtd,v.unidade,v.dias.size]);
+  if(resumoRows.length){
+    const wsResumo=XLSX.utils.aoa_to_sheet([resumoHeaders,...resumoRows]);
+    aplicarEstiloAba(wsResumo,resumoHeaders);
+    XLSX.utils.book_append_sheet(wb,wsResumo,'Resumo Saídas');
+  }
+
+  XLSX.writeFile(wb,'backup_deposito_'+dataLocal()+'.xlsx');
+  toast('✅ Backup gerado — '+datas.length+' dias de dados!');
+}
+
+// ══════════════════════════════════════════════════════════
+// RELATÓRIOS
+// ══════════════════════════════════════════════════════════
+async function renderRelatorio() {
+  const itens=Object.values(cache);
+  const venc7=itens.filter(i=>{ const d=diasVencer(i.validade); return d!==null&&d<=7; }).length;
+  document.getElementById('rel-stats').innerHTML=`<div class="stat-box"><div class="sl">Produtos</div><div class="sv">${itens.length}</div></div><div class="stat-box"><div class="sl">Unidades</div><div class="sv">${itens.reduce((s,i)=>s+(i.saldo||0),0)}</div></div><div class="stat-box"><div class="sl">Vencendo</div><div class="sv${venc7>0?' red':''}">${venc7}</div></div><div class="stat-box"><div class="sl">Frigorífico</div><div class="sv">${itens.filter(i=>i.setor==='FRIGORIFICO').length}</div></div>`;
+  const dias=relPeriod==='semana'?7:relPeriod==='mes'?30:365;
+  const saidas={},entradas={};
+  const proms=[];
+  for(let i=0;i<dias;i++){ const d=new Date(); d.setDate(d.getDate()-i); proms.push(db.ref('logs/'+dataLocal(d)).once('value')); }
+  const snaps=await Promise.all(proms);
+  snaps.forEach(s=>s.forEach(l=>{
+    const v=l.val(); if(!v||!v.code) return;
+    const key=v.code, nomeCurrent=(cache[key]&&cache[key].nome)?cache[key].nome:(v.nome||key), unid=(cache[key]&&cache[key].unidade)?cache[key].unidade:(v.unidade||'un');
+    if(v.tipo==='SAIDA'){ if(!saidas[key]) saidas[key]={nome:nomeCurrent,qtd:0,unidade:unid}; saidas[key].qtd+=Number(v.qtd)||0; }
+    else{ if(!entradas[key]) entradas[key]={nome:nomeCurrent,qtd:0,unidade:unid}; entradas[key].qtd+=Number(v.qtd)||0; }
+  }));
+  renderRanking('rank-saidas',saidas,'var(--red)');
+  renderRanking('rank-entradas',entradas,'var(--green)');
+}
+function renderRanking(id,data,cor) {
+  const el=document.getElementById(id);
+  const sorted=Object.values(data).sort((a,b)=>b.qtd-a.qtd).slice(0,10);
+  if(!sorted.length){ el.innerHTML='<div class="empty">Sem dados no período.</div>'; return; }
+  const max=sorted[0].qtd;
+  el.innerHTML=sorted.map((item,i)=>`<div class="rank-item"><div class="rank-n">${i+1}</div><div class="rank-bar-wrap"><div class="rank-nome">${item.nome}</div><div class="rank-bar"><div class="rank-fill" style="width:${(item.qtd/max*100).toFixed(0)}%;background:${cor}"></div></div></div><div class="rank-qty" style="color:${cor}">${item.qtd} <span style="font-size:10px;font-weight:400;color:var(--muted)">${item.unidade}</span></div></div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// USUÁRIOS (gerenciamento via Firebase Auth + DB)
+// ══════════════════════════════════════════════════════════
+function renderUsuarios() {
+  if(!podeAcessar('ADMIN')) return;
+  db.ref('config/usuarios').once('value').then(snap=>{
+    const cont=document.getElementById('lista-usuarios');
+    if(!snap.exists()){ cont.innerHTML='<div class="empty">Nenhum usuário.</div>'; return; }
+    let html='';
+    snap.forEach(u=>{
+      const uid=u.key, ud=u.val(), ativo=ud.ativo!==false, isMe=currentUser&&uid===currentUser.uid;
+      html+=`<div class="user-item">
+        <div>
+          <div class="user-name">${ud.nome||ud.email||uid} ${isMe?'<span style="font-size:10px;color:var(--muted)">(você)</span>':''}</div>
+          <div class="user-level">${nivelLabel(ud.nivel||'OPERADOR')} <span style="font-size:11px;color:var(--muted)">${ud.email||''}</span> ${ativo?'':'<span class="badge b-red" style="font-size:9px">INATIVO</span>'}</div>
+        </div>
+        <div class="user-actions">
+          ${!isMe?`<button class="btn btn-ghost btn-sm" onclick="toggleAtivoUsuario('${uid}',${ativo},'${ud.email||''}')">${ativo?'🚫':'✅'}</button>`:''}
+          <button class="btn btn-ghost btn-sm" onclick="abrirTrocarSenha('${uid}','${ud.email||''}')">🔑</button>
+          ${!isMe?`<button class="btn btn-sm" style="background:var(--red-dim);border:1px solid rgba(224,82,82,.3);color:var(--red)" onclick="confirmarApagarUsuario('${uid}','${ud.nome||ud.email||uid}')">🗑️</button>`:''}
+        </div>
+      </div>`;
+    });
+    cont.innerHTML=html;
+  });
+}
+
+function criarUsuario() {
+  if(!podeAcessar('ADMIN')){ toast('Acesso negado.','err'); return; }
+  const nome  = document.getElementById('new-user-nome').value.trim();
+  const email = document.getElementById('new-user-login').value.trim().toLowerCase();
+  const pass  = document.getElementById('new-user-pass').value;
+  const nivel = document.getElementById('new-user-nivel').value;
+  if(!nome){ toast('Informe o nome do usuário.','err'); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast('Email inválido.','err'); return; }
+  if(pass.length<6){ toast('Senha mínimo 6 caracteres.','err'); return; }
+
+  // Usa secondary app isolado para não disparar o onAuthStateChanged principal
+  const secAppName = 'sec_'+Date.now();
+  const secondaryApp = firebase.initializeApp(firebaseConfig, secAppName);
+  const secAuth = secondaryApp.auth();
+
+  secAuth.createUserWithEmailAndPassword(email, pass)
+    .then(cred=>{
+      const uid=cred.user.uid;
+      return db.ref('config/usuarios/'+uid).set({
+        nome, email, nivel, ativo:true,
+        criadoPor: currentUser?currentUser.email:'',
+        criadoEm: Date.now()
+      }).then(()=>{
+        // Desloga e destrói o secondary ANTES de qualquer outra ação
+        return secAuth.signOut().then(()=>secondaryApp.delete());
+      }).then(()=>{
+        toast('✅ Usuário criado: '+nome);
+        document.getElementById('new-user-nome').value='';
+        document.getElementById('new-user-login').value='';
+        document.getElementById('new-user-pass').value='';
+        renderUsuarios();
+        db.ref('auditoria/usuarios').push({acao:'criar',nome,email,nivel,feito_por:currentUser?currentUser.email:'',ts:Date.now()});
+      });
+    })
+    .catch(err=>{
+      secAuth.signOut().catch(()=>{});
+      secondaryApp.delete().catch(()=>{});
+      const msg = err.code==='auth/email-already-in-use'
+        ? 'Email já cadastrado. Se excluiu recentemente, apague também em Firebase Console → Authentication → Users.'
+        : 'Erro: '+err.message;
+      toast(msg,'err');
+    });
+}
+
+function toggleAtivoUsuario(uid, ativoAtual, email) {
+  if(!podeAcessar('ADMIN')){ toast('Acesso negado.','err'); return; }
+  if(currentUser&&uid===currentUser.uid){ toast('Não pode inativar a si mesmo.','err'); return; }
+  db.ref('config/usuarios/'+uid).update({ativo:!ativoAtual}).then(()=>{
+    toast(ativoAtual?'🚫 Usuário inativado.':'✅ Usuário ativado.');
+    renderUsuarios();
+    db.ref('auditoria/usuarios').push({acao:ativoAtual?'inativar':'ativar',email,feito_por:currentUser?currentUser.email:'',ts:Date.now()});
+  }).catch(err=>toast('Erro: '+err.code,'err'));
+}
+
+function abrirTrocarSenha(uid, email) {
+  passwdTargetUid={uid,email};
+  document.getElementById('passwd-user-label').textContent='Alterando senha de: '+email;
+  document.getElementById('passwd-new').value='';
+  document.getElementById('passwd-confirm').value='';
+  document.getElementById('passwd-modal').classList.add('open');
+}
+
+function salvarSenhaAdmin() {
+  if(!passwdTargetUid) return;
+  if(!podeAcessar('ADMIN')){ toast('Acesso negado.','err'); return; }
+  const nova=document.getElementById('passwd-new').value;
+  const conf=document.getElementById('passwd-confirm').value;
+  if(nova.length<6){ toast('Mínimo 6 caracteres.','err'); return; }
+  if(nova!==conf){ toast('Senhas não conferem.','err'); return; }
+  // Troca via secondary app
+  const secApp=firebase.initializeApp(firebaseConfig,'pw_'+Date.now());
+  // Não temos a senha atual do usuário para re-autenticar via client SDK.
+  // Solução: salva nova senha no DB como pendente e força no próximo login.
+  // Para segurança real use Firebase Admin SDK (Cloud Functions).
+  // Por ora marcamos senha_pendente no perfil — o usuário faz reset ao logar.
+  db.ref('config/usuarios/'+passwdTargetUid.uid).update({
+    senha_reset_pendente: true,
+    nova_senha_hash: btoa(nova), // Base64 simples — apenas para comunicação interna
+    reset_solicitado_por: currentUser?currentUser.email:'',
+    reset_ts: Date.now()
+  }).then(()=>{
+    secApp.delete().catch(()=>{});
+    toast('✅ Reset de senha solicitado. Usuário será notificado.');
+    document.getElementById('passwd-modal').classList.remove('open');
+    db.ref('auditoria/usuarios').push({acao:'reset_senha',email:passwdTargetUid.email,feito_por:currentUser?currentUser.email:'',ts:Date.now()});
+  }).catch(err=>{ secApp.delete().catch(()=>{}); toast('Erro: '+err.code,'err'); });
+}
+
+// ══════════════════════════════════════════════════════════
+// APAGAR USUÁRIO
+// ══════════════════════════════════════════════════════════
+function confirmarApagarUsuario(uid, nome) {
+  if (!podeAcessar('ADMIN')) { toast('Acesso negado.', 'err'); return; }
+  if (currentUser && uid === currentUser.uid) { toast('Não pode apagar a si mesmo.', 'err'); return; }
+
+  // Busca o email do usuário para mostrar na confirmação
+  db.ref('config/usuarios/' + uid + '/email').once('value').then(snap => {
+    const email = snap.val() || '';
+    document.getElementById('confirm-nome').textContent = nome;
+    document.getElementById('confirm-det').textContent  = email;
+    document.getElementById('confirm-msg').textContent  = '⚠️ O acesso será bloqueado imediatamente. Para reusar este email no futuro, apague também em Firebase Console → Authentication.';
+    document.getElementById('confirm-modal').classList.add('open');
+    confirmCallback = () => apagarUsuario(uid, nome);
+  });
+}
+
+function apagarUsuario(uid, nome) {
+  // 1. Remove perfil do Realtime Database
+  db.ref('config/usuarios/' + uid).remove()
+    .then(() => {
+      toast('🗑️ Usuário removido: ' + nome);
+      renderUsuarios();
+      db.ref('auditoria/usuarios').push({
+        acao: 'apagar', uid, nome,
+        feito_por: currentUser ? currentUser.email : '',
+        ts: Date.now()
+      });
+    })
+    .catch(err => toast('Erro ao apagar do banco: ' + err.code, 'err'));
+
+  // 2. Apaga do Firebase Authentication usando secondary app
+  // O Admin cria uma instância secundária, mas não conseguimos deletar outro
+  // usuário sem o Admin SDK. A solução client-side é desabilitar no DB (ativo:false)
+  // Para recriar o mesmo email: vá em Firebase Console → Authentication → apague manualmente.
+  // Ou use esta função que tenta apagar via secondary app sign-in (só funciona se souber a senha):
+  // db.ref('config/usuarios/' + uid + '/email') para pegar o email e tentar deletar.
+  // NOTA: sem a senha do usuário não é possível deletar do Auth via client SDK.
+  // A remoção do DB já barra o acesso imediatamente.
+}
+
+// Função auxiliar para recriar usuário com mesmo email após exclusão manual no Firebase Console
+// Acesse: https://console.firebase.google.com → Authentication → Users → encontre o email → delete
+function instrucaoRecriarUsuario(email) {
+  toast('Para reusar este email: apague em Firebase Console → Authentication → Users', 'warn');
+  console.info('Recriar usuário: Firebase Console → Authentication → Users → delete ' + email);
+}
+
+// ══════════════════════════════════════════════════════════
+// RECIBO (Operador)
+// ══════════════════════════════════════════════════════════
+function mostrarRecibo(nome, qtd, unidade, obs, novoSaldo) {
+  const hora = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const data = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
+  document.getElementById('recibo-content').innerHTML = `
+    <div class="recibo-row">
+      <span class="recibo-label">Produto</span>
+      <span class="recibo-val">${nome}</span>
+    </div>
+    <div class="recibo-row">
+      <span class="recibo-label">Quantidade</span>
+      <span class="recibo-val" style="color:var(--red)">-${qtd} ${unidade}</span>
+    </div>
+    <div class="recibo-row">
+      <span class="recibo-label">Finalidade</span>
+      <span class="recibo-val" style="font-size:13px">${obs}</span>
+    </div>
+    <div class="recibo-row">
+      <span class="recibo-label">Saldo restante</span>
+      <span class="recibo-val" style="color:${novoSaldo>0?'var(--green)':'var(--red)'}">${novoSaldo} ${unidade}</span>
+    </div>
+    <div class="recibo-row">
+      <span class="recibo-label">Horário</span>
+      <span class="recibo-val" style="font-size:13px">${data} · ${hora}</span>
+    </div>`;
+  document.getElementById('recibo-box').style.display = 'block';
+  // Esconde o formulário
+  document.querySelector('#page-saida .card.accent-red').style.display = 'none';
+  document.querySelector('#page-saida .qr-toggle').style.display = 'none';
+  document.getElementById('qr-wrap-saida').style.display = 'none';
+}
+
+function fecharRecibo() {
+  document.getElementById('recibo-box').style.display = 'none';
+  const card = document.querySelector('#page-saida .card.accent-red');
+  const toggle = document.querySelector('#page-saida .qr-toggle');
+  if(card) card.style.display = '';
+  if(toggle) toggle.style.display = '';
+}
+
+
+</script>
 </body>
 </html>
