@@ -48,7 +48,7 @@
   --red:#e05252; --red-dim:rgba(224,82,82,.14);
   --amber:#d4943a; --amber-dim:rgba(212,148,58,.14);
   --blue:#5b8dee; --blue-dim:rgba(91,141,238,.14);
-  --nav-bottom:72px; --r:16px;
+  --nav-bottom:84px; --r:16px;
   --card-grad:linear-gradient(145deg,#121812 0%,#141a14 100%);
   --font-title:'Playfair Display',serif;
   --font-body:'DM Sans',sans-serif;
@@ -173,18 +173,18 @@ body {
 .bn-item.active { color:var(--gold); }
 .bn-item.active .bn-ico-wrap { background:var(--gold-dim); }
 .bn-ico-wrap {
-  width:38px; height:28px; border-radius:10px;
+  width:44px; height:34px; border-radius:12px;
   display:flex; align-items:center; justify-content:center;
-  font-size:18px; transition:background .2s;
+  font-size:22px; transition:background .2s;
 }
-.bn-label { font-size:9px; font-weight:700; letter-spacing:.6px; }
+.bn-label { font-size:10px; font-weight:700; letter-spacing:.6px; }
 
 /* Botão Saída — destacado no centro */
 .bn-item.bn-saida .bn-ico-wrap {
-  width:50px; height:36px; border-radius:14px;
+  width:60px; height:44px; border-radius:16px;
   background:var(--red);
-  box-shadow:0 4px 16px rgba(224,82,82,.4);
-  margin-top:-10px;
+  box-shadow:0 4px 20px rgba(224,82,82,.45);
+  margin-top:-14px;
 }
 .bn-item.bn-saida.active .bn-ico-wrap {
   background:var(--red);
@@ -645,9 +645,9 @@ tr:hover td { background:rgba(201,168,76,.04); }
 /* Folha SVG animada */
 .acanto-wrap {
   position:relative;
-  width:160px; height:160px;
+  width:200px; height:200px;
   display:flex; align-items:center; justify-content:center;
-  margin-bottom:24px;
+  margin-bottom:28px;
 }
 .acanto-ring {
   position:absolute; inset:0;
@@ -672,20 +672,18 @@ tr:hover td { background:rgba(201,168,76,.04); }
 
 /* SVG da folha */
 .acanto-svg {
-  width:80px; height:80px;
-  filter:drop-shadow(0 0 12px rgba(201,168,76,.4));
-  animation:acanto-rotate 8s ease-in-out infinite alternate,
-            acanto-glow 2.5s ease-in-out infinite;
-  transform-origin:center;
+  width:130px; height:auto;
+  position:relative; z-index:1;
+  animation:acanto-breathe 3s ease-in-out infinite,
+            acanto-glow    3s ease-in-out infinite;
 }
-@keyframes acanto-rotate {
-  0%   { transform: rotate(-6deg) scale(1); }
-  50%  { transform: rotate(0deg)  scale(1.05); }
-  100% { transform: rotate(6deg)  scale(1); }
+@keyframes acanto-breathe {
+  0%,100% { transform: scale(1)    translateY(0px); }
+  50%     { transform: scale(1.07) translateY(-4px); }
 }
 @keyframes acanto-glow {
-  0%,100% { filter: drop-shadow(0 0 8px rgba(201,168,76,.3)); }
-  50%     { filter: drop-shadow(0 0 20px rgba(201,168,76,.7)); }
+  0%,100% { filter: drop-shadow(0 0 8px  rgba(201,168,76,.4)) brightness(1);   }
+  50%     { filter: drop-shadow(0 0 22px rgba(201,168,76,.85)) brightness(1.1); }
 }
 
 /* Linhas decorativas que crescem */
@@ -737,40 +735,16 @@ tr:hover td { background:rgba(201,168,76,.04); }
     <div class="acanto-ring"></div>
     <div class="acanto-ring"></div>
     <div class="acanto-ring"></div>
-    <!-- Folha de acanto em SVG -->
-    <svg class="acanto-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <radialGradient id="ag" cx="50%" cy="60%" r="50%">
-          <stop offset="0%"   stop-color="#e8c96a"/>
-          <stop offset="60%"  stop-color="#c9a84c"/>
-          <stop offset="100%" stop-color="#8a6820"/>
-        </radialGradient>
-      </defs>
-      <!-- Haste central -->
-      <path d="M50 95 Q50 70 50 50" stroke="url(#ag)" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <!-- Folhas laterais grandes -->
-      <path d="M50 80 Q30 70 18 52 Q28 55 38 68 Q42 60 38 45 Q50 58 50 72" fill="url(#ag)" opacity=".95"/>
-      <path d="M50 80 Q70 70 82 52 Q72 55 62 68 Q58 60 62 45 Q50 58 50 72" fill="url(#ag)" opacity=".95"/>
-      <!-- Folhas médias -->
-      <path d="M50 65 Q34 58 24 40 Q36 44 44 57 Q46 48 42 34 Q52 48 50 62" fill="url(#ag)" opacity=".85"/>
-      <path d="M50 65 Q66 58 76 40 Q64 44 56 57 Q54 48 58 34 Q48 48 50 62" fill="url(#ag)" opacity=".85"/>
-      <!-- Folhas pequenas no topo -->
-      <path d="M50 48 Q40 42 34 28 Q44 34 48 45 Q48 36 46 22 Q52 36 50 46" fill="url(#ag)" opacity=".75"/>
-      <path d="M50 48 Q60 42 66 28 Q56 34 52 45 Q52 36 54 22 Q48 36 50 46" fill="url(#ag)" opacity=".75"/>
-      <!-- Flor central -->
-      <circle cx="50" cy="20" r="5" fill="#e8c96a" opacity=".9"/>
-      <circle cx="50" cy="20" r="3" fill="#fff" opacity=".4"/>
-    </svg>
-    <!-- Linhas decorativas -->
+    <img src="assets/intendencia.png" class="acanto-svg" alt="Acanto">
     <svg class="acanto-lines" viewBox="0 0 160 160" style="position:absolute;inset:0;width:100%;height:100%">
-      <line x1="80" y1="4"  x2="80" y2="20" stroke="rgba(201,168,76,.3)" stroke-width="1"/>
-      <line x1="80" y1="140" x2="80" y2="156" stroke="rgba(201,168,76,.3)" stroke-width="1"/>
-      <line x1="4"  y1="80" x2="20" y2="80" stroke="rgba(201,168,76,.3)" stroke-width="1"/>
-      <line x1="140" y1="80" x2="156" y2="80" stroke="rgba(201,168,76,.3)" stroke-width="1"/>
-      <line x1="26" y1="26" x2="38" y2="38" stroke="rgba(201,168,76,.2)" stroke-width="1"/>
+      <line x1="80" y1="4"    x2="80"  y2="20"  stroke="rgba(201,168,76,.3)" stroke-width="1"/>
+      <line x1="80" y1="140"  x2="80"  y2="156" stroke="rgba(201,168,76,.3)" stroke-width="1"/>
+      <line x1="4"  y1="80"   x2="20"  y2="80"  stroke="rgba(201,168,76,.3)" stroke-width="1"/>
+      <line x1="140" y1="80"  x2="156" y2="80"  stroke="rgba(201,168,76,.3)" stroke-width="1"/>
+      <line x1="26"  y1="26"  x2="38"  y2="38"  stroke="rgba(201,168,76,.2)" stroke-width="1"/>
       <line x1="122" y1="122" x2="134" y2="134" stroke="rgba(201,168,76,.2)" stroke-width="1"/>
-      <line x1="134" y1="26" x2="122" y2="38" stroke="rgba(201,168,76,.2)" stroke-width="1"/>
-      <line x1="26" y1="134" x2="38" y2="122" stroke="rgba(201,168,76,.2)" stroke-width="1"/>
+      <line x1="134" y1="26"  x2="122" y2="38"  stroke="rgba(201,168,76,.2)" stroke-width="1"/>
+      <line x1="26"  y1="134" x2="38"  y2="122" stroke="rgba(201,168,76,.2)" stroke-width="1"/>
     </svg>
   </div>
   <div class="auth-loading-title">Depósito Aprov</div>
